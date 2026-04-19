@@ -7,8 +7,34 @@ export default function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   return (
-    <main className="min-h-screen grid md:grid-cols-[1.1fr_.9fr] bg-white">
-      {/* Colonna sinistra: form */}
+    <main className="min-h-screen grid md:grid-cols-[.9fr_1.1fr] bg-white">
+      {/* Colonna sinistra: branding */}
+      <section className="hidden md:flex relative items-center justify-center brand-gradient text-white p-12 overflow-hidden">
+        <div className="relative z-10 max-w-sm">
+          <div className="flex items-center gap-3 mb-8">
+            <LoopLogo size={44} variant="light" />
+          </div>
+          <div className="text-xs tracking-widest opacity-70 mb-4">
+            SISTEMA LOOP
+          </div>
+          <h2 className="text-4xl font-bold mb-4 leading-tight">
+            Arbitraggio matematico su XAUUSD
+          </h2>
+          <p className="text-white/80 leading-relaxed">
+            Un percorso guidato passo-passo per mettere in operatività il sistema
+            a rischio zero. 6 moduli video, checklist operativa, supporto diretto.
+          </p>
+          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
+            <Stat n="6" label="Moduli" />
+            <Stat n="~90m" label="Durata" />
+            <Stat n="0€" label="Costo" />
+          </div>
+        </div>
+        <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-blue-500/20 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full bg-blue-300/10 blur-3xl" />
+      </section>
+
+      {/* Colonna destra: form */}
       <section className="flex items-center justify-center p-8 md:p-16">
         <div className="w-full max-w-md">
           <div className="flex items-center gap-3 mb-10">
@@ -36,7 +62,7 @@ export default function LoginPage({
           <p className="mt-8 text-xs text-ink-muted">
             Servizio gratuito di assistenza tecnica LOOP — nessuna vendita, nessuna
             commissione. Per accesso, contatta{" "}
-            <a
+            
               className="text-blue-m font-medium hover:underline"
               href="mailto:luca@lucadigioia.ch"
             >
@@ -45,30 +71,6 @@ export default function LoginPage({
             .
           </p>
         </div>
-      </section>
-
-      {/* Colonna destra: branding */}
-      <section className="hidden md:flex relative items-center justify-center brand-gradient text-white p-12 overflow-hidden">
-        <div className="relative z-10 max-w-sm">
-          <div className="text-xs tracking-widest opacity-70 mb-4">
-            SISTEMA LOOP
-          </div>
-          <h2 className="text-4xl font-bold mb-4 leading-tight">
-            Arbitraggio matematico su XAUUSD
-          </h2>
-          <p className="text-white/80 leading-relaxed">
-            Un percorso guidato passo-passo per mettere in operatività il sistema
-            a rischio zero. 6 moduli video, checklist operativa, supporto diretto.
-          </p>
-          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-            <Stat n="6" label="Moduli" />
-            <Stat n="~90m" label="Durata" />
-            <Stat n="0€" label="Costo" />
-          </div>
-        </div>
-        {/* Decorazione */}
-        <div className="absolute -top-24 -right-24 w-[420px] h-[420px] rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -left-24 w-[420px] h-[420px] rounded-full bg-blue-300/10 blur-3xl" />
       </section>
     </main>
   );
