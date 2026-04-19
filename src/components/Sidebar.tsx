@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactElement } from "react";
 import { LoopLogo } from "./LoopLogo";
 import { usePathname } from "next/navigation";
 
@@ -16,7 +17,7 @@ export function Sidebar({ role, fullName, email, counters = [] }: Props) {
   const path = usePathname() || "";
   const isAdmin = role === "admin";
 
-  type Item = { href: string; label: string; icon: (p: any) => JSX.Element; section?: string };
+  type Item = { href: string; label: string; icon: (p: any) => ReactElement; section?: string };
 
   const items: Item[] = isAdmin
     ? [
