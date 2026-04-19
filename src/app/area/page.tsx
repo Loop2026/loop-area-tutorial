@@ -4,6 +4,7 @@ import { computeModuleStates } from "@/lib/modules-state";
 import { Sidebar } from "@/components/Sidebar";
 import { ModuleCard } from "@/components/ModuleCard";
 import { Checklist } from "@/components/Checklist";
+import { LoopLogo } from "@/components/LoopLogo";
 import type {
   ModuleRow, ProgressRow, ChecklistItem, UserChecklistRow, Profile
 } from "@/lib/types";
@@ -58,14 +59,20 @@ export default async function AreaPage() {
       <main className="flex-1 min-w-0">
         {/* Topbar */}
         <div className="topbar">
-          <div className="crumbs">
-            <strong>Area Tutorial</strong>&nbsp;/ Dashboard
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="brand-mini">
+              <LoopLogo size={28} />
+            </div>
+            <div className="crumbs truncate">
+              <strong>Area Tutorial</strong>
+              <span className="hidden sm:inline">&nbsp;/ Dashboard</span>
+            </div>
           </div>
           <div className="flex items-center gap-3">
             <span className="badge badge-success">
               <span className="dot dot-success" /> Online
             </span>
-            <span className="text-xs text-ink-muted mono">
+            <span className="hidden sm:inline text-xs text-ink-muted mono">
               {new Date().toLocaleDateString("it-IT", {
                 weekday: "short", day: "numeric", month: "short"
               })}

@@ -30,6 +30,7 @@ export default function LoginPage({
             <Stat n="0€" label="Costo" />
           </div>
         </div>
+        {/* Decorazione */}
         <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-blue-500/20 blur-3xl" />
         <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full bg-blue-300/10 blur-3xl" />
       </section>
@@ -62,7 +63,7 @@ export default function LoginPage({
           <p className="mt-8 text-xs text-ink-muted">
             Servizio gratuito di assistenza tecnica LOOP — nessuna vendita, nessuna
             commissione. Per accesso, contatta{" "}
-            
+            <a
               className="text-blue-m font-medium hover:underline"
               href="mailto:luca@lucadigioia.ch"
             >

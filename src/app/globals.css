@@ -106,7 +106,7 @@ html, body {
     font-size:10px; font-weight:700; padding:2px 7px; border-radius:10px;
   }
 
-   /* ------- Topbar ------- */
+  /* ------- Topbar ------- */
   .topbar {
     display:flex; align-items:center; justify-content:space-between;
     padding: 14px 28px;
