@@ -5,7 +5,12 @@ export const metadata: Metadata = {
   title: "LOOP — Area Tutorial",
   description:
     "Area tutorial privata LOOP per l'onboarding clienti al sistema di arbitraggio matematico su XAUUSD.",
-  robots: { index: false, follow: false } // area riservata
+  robots: { index: false, follow: false }, // area riservata
+  icons: {
+    icon: [{ url: "/favicon.png", type: "image/png" }],
+    shortcut: "/favicon.png",
+    apple: "/favicon.png"
+  }
 };
 
 export default function RootLayout({

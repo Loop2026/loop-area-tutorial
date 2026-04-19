@@ -7,81 +7,84 @@ export default function LoginPage({
   searchParams: Promise<{ next?: string; error?: string }>;
 }) {
   return (
-    <main className="min-h-screen grid md:grid-cols-[.9fr_1.1fr] bg-white">
-      {/* Colonna sinistra: branding */}
-      <section className="hidden md:flex relative items-center justify-center brand-gradient text-white p-12 overflow-hidden">
-        <div className="relative z-10 max-w-sm">
-          <div className="flex items-center gap-3 mb-8">
-            <LoopLogo size={44} variant="light" />
-          </div>
-          <div className="text-xs tracking-widest opacity-70 mb-4">
-            SISTEMA LOOP
-          </div>
-          <h2 className="text-4xl font-bold mb-4 leading-tight">
-            Arbitraggio matematico su XAUUSD
-          </h2>
-          <p className="text-white/80 leading-relaxed">
-            Un percorso guidato passo-passo per mettere in operatività il sistema
-            a rischio zero. 6 moduli video, checklist operativa, supporto diretto.
-          </p>
-          <div className="mt-8 grid grid-cols-3 gap-4 text-center">
-            <Stat n="6" label="Moduli" />
-            <Stat n="~90m" label="Durata" />
-            <Stat n="0€" label="Costo" />
+    <main className="min-h-screen grid md:grid-cols-[1.1fr_.9fr] bg-white">
+      {/* Colonna sinistra: branding (1.1fr) */}
+      <section className="login-art hidden md:flex">
+        <div className="brand">
+          <LoopLogo size={96} variant="light" />
+          <div className="flex flex-col gap-1">
+            <small className="text-white/50 font-semibold text-[10px] tracking-[.18em] uppercase">
+              Area Clienti
+            </small>
           </div>
         </div>
-        {/* Decorazione */}
-        <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-blue-500/20 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 w-[420px] h-[420px] rounded-full bg-blue-300/10 blur-3xl" />
+
+        <div className="art-copy">
+          <div className="art-kicker">
+            <span className="dot" />
+            ACCESSO RISERVATO
+          </div>
+          <h1>
+            Il tuo percorso <em>operativo</em> inizia qui.
+          </h1>
+          <p>
+            Sei videocorsi, una dashboard operativa e il supporto del nostro team.
+            Accedi con le credenziali ricevute via email dopo l&apos;attivazione del
+            tuo contratto.
+          </p>
+        </div>
+
+        <div className="art-foot">
+          <span>
+            <strong>6</strong>
+            <small>video tutorial</small>
+          </span>
+          <span>
+            <strong>24/7</strong>
+            <small>accesso riservato</small>
+          </span>
+          <span>
+            <strong>MFA</strong>
+            <small>autenticazione 2FA</small>
+          </span>
+        </div>
       </section>
 
-      {/* Colonna destra: form */}
-      <section className="flex items-center justify-center p-8 md:p-16">
-        <div className="w-full max-w-md">
-          <div className="flex items-center gap-3 mb-10">
-            <LoopLogo size={44} />
-            <div className="pl-3 border-l border-paper-border">
-              <div className="text-xs tracking-widest text-ink-muted uppercase">
-                Area Tutorial
-              </div>
-              <div className="text-sm font-semibold text-ink">
-                Onboarding Cliente
-              </div>
-            </div>
+      {/* Colonna destra: form (.9fr) */}
+      <section className="login-form">
+        <div className="w-full max-w-md mx-auto">
+          {/* Logo mobile (visibile solo < md) */}
+          <div className="md:hidden mb-8 flex justify-center">
+            <LoopLogo size={64} />
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold text-ink mb-2">
-            Accedi all&apos;area riservata
-          </h1>
-          <p className="text-ink-muted mb-8">
-            Inserisci le credenziali ricevute via email per iniziare il tuo
-            percorso di onboarding.
-          </p>
+          <div className="form-head">
+            <span className="eyebrow">Accedi</span>
+            <h2>Bentornato.</h2>
+            <p>
+              Inserisci le credenziali ricevute via email dopo l&apos;attivazione del
+              tuo contratto. Se hai problemi, il team risponde entro 24 ore lavorative.
+            </p>
+          </div>
 
           <LoginForm nextParam={searchParams} />
 
-          <p className="mt-8 text-xs text-ink-muted">
-            Servizio gratuito di assistenza tecnica LOOP — nessuna vendita, nessuna
-            commissione. Per accesso, contatta{" "}
-            <a
-              className="text-blue-m font-medium hover:underline"
-              href="mailto:luca@lucadigioia.ch"
-            >
-              luca@lucadigioia.ch
-            </a>
-            .
-          </p>
+          <div className="mfa-note mt-6">
+            <div className="d" />
+            <small>
+              <b>Servizio gratuito di assistenza tecnica LOOP.</b> Nessuna
+              vendita, nessuna commissione. Per richiedere un accesso scrivi a{" "}
+              <a
+                className="text-blue-m font-semibold hover:underline"
+                href="mailto:luca@lucadigioia.ch"
+              >
+                luca@lucadigioia.ch
+              </a>
+              .
+            </small>
+          </div>
         </div>
       </section>
     </main>
-  );
-}
-
-function Stat({ n, label }: { n: string; label: string }) {
-  return (
-    <div className="bg-white/10 rounded-xl py-3 backdrop-blur">
-      <div className="text-2xl font-bold">{n}</div>
-      <div className="text-[11px] tracking-wider opacity-80 mt-1">{label}</div>
-    </div>
   );
 }

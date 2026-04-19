@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { computeModuleStates } from "@/lib/modules-state";
-import { Sidebar } from "@/components/Sidebar";
 import { ModuleCard } from "@/components/ModuleCard";
 import { Checklist } from "@/components/Checklist";
 import { LoopLogo } from "@/components/LoopLogo";
@@ -37,176 +36,191 @@ export default async function AreaPage() {
   const done       = states.filter((s) => s.state === "completed").length;
   const inProgress = states.filter((s) => s.state === "in_progress").length;
   const locked     = states.filter((s) => s.state === "locked").length;
-  const pct        = Math.round((done / Math.max(total, 1)) * 100);
+  const pct        = total ? Math.round((done / total) * 100) : 0;
 
-  // ore totali stimate dai moduli completati
   const watchedMin = states
     .filter((s) => s.state === "completed")
     .reduce((acc, s) => acc + parseDuration(s.duration), 0);
 
-  const chkDone = (chkUser ?? []).filter((c) => c.done).length;
+  const chkDone  = (chkUser ?? []).filter((c) => c.done).length;
   const chkTotal = (chkItems ?? []).length;
 
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar
-        role="client"
-        fullName={profile?.full_name ?? ""}
-        email={profile?.email ?? user.email!}
-        counters={[{ href: "/area", value: total - done }]}
-      />
+  const fullName = profile?.full_name ?? "";
+  const email    = profile?.email ?? user.email ?? "";
+  const display  = fullName || email;
 
-      <main className="flex-1 min-w-0">
-        {/* Topbar */}
-        <div className="topbar">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="brand-mini">
-              <LoopLogo size={28} />
+  // step corrente per la kicker
+  const stepNumber = Math.min(done + 1, total || 1);
+
+  return (
+    <div className="min-h-screen bg-[var(--off)]">
+      {/* ============ TOPBAR navy con nav orizzontale ============ */}
+      <header className="topbar">
+        <div className="brand">
+          <LoopLogo size={68} variant="light" />
+        </div>
+        <nav>
+          <a href="/area" className="active">Tutorial</a>
+          <a href="#progress">Progresso</a>
+          <a href="#checklist">Checklist</a>
+          <a href="#support">Supporto</a>
+        </nav>
+        <div className="flex items-center gap-3">
+          <div className="user-chip">
+            <small>{shortName(display)}</small>
+            <div className="av">{initials(display)}</div>
+          </div>
+          <form action="/api/auth/logout" method="post">
+            <button
+              type="submit"
+              className="text-[12px] text-white/65 hover:text-white px-3 py-2 rounded-full border border-white/10 hover:border-white/30 transition"
+              aria-label="Logout"
+            >
+              Esci
+            </button>
+          </form>
+        </div>
+      </header>
+
+      {/* ============ HERO grande con grid pattern ============ */}
+      <section id="progress" className="hero-big">
+        <div className="wrap">
+          <div className="eyebrow">
+            <span className="d" />
+            ONBOARDING · STEP {stepNumber} DI {total || 6}
+          </div>
+          <h1>
+            Bentornato, <em>{firstName(display)}</em>.
+          </h1>
+          <p>
+            Hai completato {done} {done === 1 ? "modulo" : "moduli"} su {total || 6}.
+            Ora ti guidiamo passo dopo passo attraverso il metodo, il software, il
+            broker, la challenge e la dashboard operativa.
+          </p>
+
+          <div className="progress-bar mt-8">
+            <span style={{ width: `${pct}%` }} />
+          </div>
+          <div className="p-label">
+            <span>Progresso onboarding</span>
+            <b>{pct}% · {done} / {total || 6} moduli completati</b>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ CONTENT che si sovrappone ============ */}
+      <div className="area-content">
+        {/* KPI row */}
+        <div className="kpis">
+          <div className="kpi">
+            <div className="kpi-h">
+              <div className="kpi-l">Moduli completati</div>
+              <div className="kpi-i"><IconStack /></div>
             </div>
-            <div className="crumbs truncate">
-              <strong>Area Tutorial</strong>
-              <span className="hidden sm:inline">&nbsp;/ Dashboard</span>
+            <div className="kpi-v">{done} / {total || 6}</div>
+            <div className="kpi-d">
+              {done === total && total > 0
+                ? "Tutti completati 🎉"
+                : `${(total || 6) - done} rimasti`}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="badge badge-success">
-              <span className="dot dot-success" /> Online
-            </span>
-            <span className="hidden sm:inline text-xs text-ink-muted mono">
-              {new Date().toLocaleDateString("it-IT", {
-                weekday: "short", day: "numeric", month: "short"
-              })}
-            </span>
+
+          <div className="kpi">
+            <div className="kpi-h">
+              <div className="kpi-l">In corso</div>
+              <div className="kpi-i"><IconPlay /></div>
+            </div>
+            <div className="kpi-v">{inProgress}</div>
+            <div className="kpi-d">
+              {inProgress ? "Continua dove hai lasciato" : "Nessun modulo aperto"}
+            </div>
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-h">
+              <div className="kpi-l">Bloccati</div>
+              <div className="kpi-i"><IconLock /></div>
+            </div>
+            <div className="kpi-v">{locked}</div>
+            <div className="kpi-d">Sbloccabili in sequenza</div>
+          </div>
+
+          <div className="kpi">
+            <div className="kpi-h">
+              <div className="kpi-l">Tempo fruito</div>
+              <div className="kpi-i"><IconClock /></div>
+            </div>
+            <div className="kpi-v">{watchedMin}m</div>
+            <div className="kpi-d">Basato sui moduli completati</div>
           </div>
         </div>
 
-        <div className="p-6 md:p-8 max-w-[1180px] mx-auto w-full">
-          {/* Hero */}
-          <section id="progress" className="hero">
-            <div className="hero-grid">
-              <div>
-                <div className="text-[11px] font-semibold text-blue-xl uppercase tracking-[.14em] mb-2">
-                  Benvenuto
-                </div>
-                <h1>Ciao {firstName(profile?.full_name ?? profile?.email ?? "")}</h1>
-                <p className="hero-sub">
-                  Completa i <strong className="text-white">{total} moduli video</strong> e
-                  la <strong className="text-white">checklist operativa</strong> per
-                  essere pronto a usare il sistema LOOP in autonomia.
-                </p>
-                <div className="mt-5 max-w-[320px]">
-                  <div className="progress-bar on-dark">
-                    <span style={{ width: `${pct}%` }} />
-                  </div>
-                  <div className="flex items-center justify-between mt-2 text-[11px] uppercase tracking-[.14em] text-blue-xl">
-                    <span>Percorso</span>
-                    <span className="mono text-white">{pct}%</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="hero-stat">
-                <div className="lbl">Moduli completati</div>
-                <div className="val">
-                  {done}<span className="text-blue-xl">/{total}</span>
-                </div>
-                <div className="hint">
-                  {done === total ? "Tutti completati 🎉" : `${total - done} rimasti`}
-                </div>
-              </div>
-
-              <div className="hero-stat">
-                <div className="lbl">Checklist operativa</div>
-                <div className="val">
-                  {chkDone}<span className="text-blue-xl">/{chkTotal}</span>
-                </div>
-                <div className={`hint ${chkDone < chkTotal ? "warn" : ""}`}>
-                  {chkDone === chkTotal ? "Setup completo" : "Da completare"}
-                </div>
-              </div>
+        {/* Sezione moduli */}
+        <section className="mb-12">
+          <header className="section-head">
+            <div>
+              <small>I tuoi moduli</small>
+              <h2>Percorso operativo</h2>
+              <p>
+                Segui l&apos;ordine: ogni modulo si sblocca al completamento del
+                precedente.
+              </p>
             </div>
-          </section>
-
-          {/* KPI */}
-          <section className="kpis">
-            <Kpi
-              label="Moduli totali"
-              value={String(total)}
-              detail="Percorso strutturato in 6 step"
-              icon={<IconStack />}
-            />
-            <Kpi
-              label="In corso"
-              value={String(inProgress)}
-              detail={inProgress ? "Continua dove hai lasciato" : "Nessun modulo aperto"}
-              icon={<IconPlay />}
-            />
-            <Kpi
-              label="Bloccati"
-              value={String(locked)}
-              detail="Sbloccabili in sequenza"
-              icon={<IconLock />}
-            />
-            <Kpi
-              label="Tempo fruito"
-              value={`${watchedMin}m`}
-              detail="Basato sui moduli completati"
-              icon={<IconClock />}
-            />
-          </section>
-
-          {/* Moduli */}
-          <section className="mb-10">
-            <header className="flex items-end justify-between mb-4">
-              <div>
-                <h2 className="text-lg font-bold text-ink">I tuoi moduli</h2>
-                <p className="text-sm text-ink-muted">
-                  Segui l&apos;ordine: ogni modulo si sblocca al completamento del precedente.
-                </p>
-              </div>
-              <div className="hidden md:flex items-center gap-2">
-                <span className="badge badge-info">
-                  <span className="dot dot-success" /> Sbloccati {total - locked}
-                </span>
-                <span className="badge badge-muted">
-                  <span className="dot dot-muted" /> Bloccati {locked}
-                </span>
-              </div>
-            </header>
-
-            <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-              {states.map((m) => <ModuleCard key={m.id} m={m} />)}
+            <div className="hidden md:flex items-center gap-2">
+              <span className="badge badge-info">
+                <span className="dot dot-success" /> Sbloccati {(total || 0) - locked}
+              </span>
+              <span className="badge badge-muted">
+                <span className="dot dot-muted" /> Bloccati {locked}
+              </span>
             </div>
-          </section>
+          </header>
 
-          {/* Checklist */}
-          <section id="checklist">
-            <Checklist
-              items={(chkItems ?? []) as ChecklistItem[]}
-              userChecklist={(chkUser ?? []) as UserChecklistRow[]}
-              userId={user.id}
-            />
-          </section>
-        </div>
-      </main>
-    </div>
-  );
-}
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            {states.map((m) => <ModuleCard key={m.id} m={m} />)}
+          </div>
+        </section>
 
-/* -------- KPI mini component -------- */
-function Kpi({
-  label, value, detail, icon
-}: {
-  label: string; value: string; detail: string; icon: React.ReactNode;
-}) {
-  return (
-    <div className="kpi">
-      <div className="kpi-h">
-        <div className="kpi-l">{label}</div>
-        <div className="kpi-i">{icon}</div>
+        {/* Checklist */}
+        <section id="checklist" className="mb-12">
+          <header className="section-head">
+            <div>
+              <small>Setup operativo</small>
+              <h2>Checklist</h2>
+              <p>
+                Completa i {chkTotal} step per essere pronto a usare il sistema LOOP
+                in autonomia ({chkDone}/{chkTotal} fatti).
+              </p>
+            </div>
+          </header>
+          <Checklist
+            items={(chkItems ?? []) as ChecklistItem[]}
+            userChecklist={(chkUser ?? []) as UserChecklistRow[]}
+            userId={user.id}
+          />
+        </section>
+
+        {/* Support */}
+        <section
+          id="support"
+          className="bg-white border border-[var(--border)] rounded-xl p-7 md:p-9 flex flex-col md:flex-row md:items-center md:justify-between gap-5"
+        >
+          <div>
+            <div className="text-[11px] font-bold tracking-[.16em] uppercase text-[var(--blue-m)] mb-2">
+              Hai bisogno di aiuto?
+            </div>
+            <h3 className="text-xl font-bold text-ink mb-1">
+              Servizio gratuito di assistenza tecnica LOOP
+            </h3>
+            <p className="text-[14px] text-[var(--mid)] leading-relaxed">
+              Nessuna vendita, nessuna commissione. Risposta entro 24 ore lavorative.
+            </p>
+          </div>
+          <a href="mailto:luca@lucadigioia.ch" className="btn btn-primary">
+            Scrivi al supporto
+          </a>
+        </section>
       </div>
-      <div className="kpi-v">{value}</div>
-      <div className="kpi-d">{detail}</div>
     </div>
   );
 }
@@ -215,8 +229,16 @@ function Kpi({
 function firstName(s: string) {
   return (s.split(" ")[0] || s.split("@")[0] || "").trim();
 }
+function shortName(s: string) {
+  const parts = s.trim().split(/\s+/);
+  if (parts.length >= 2) return `${parts[0]} ${parts[1][0]}.`;
+  return parts[0] || s;
+}
+function initials(s: string) {
+  const parts = s.split(/[\s@.]+/).filter(Boolean);
+  return (parts[0]?.[0] ?? "?").toUpperCase() + (parts[1]?.[0] ?? "").toUpperCase();
+}
 function parseDuration(d: string): number {
-  // "12:40" → 12
   const [m = "0"] = (d || "").split(":");
   return parseInt(m, 10) || 0;
 }
