@@ -57,7 +57,7 @@ export default async function AreaPage() {
       {/* ============ TOPBAR navy con nav orizzontale ============ */}
       <header className="topbar">
         <div className="brand">
-          <LoopLogo size={68} variant="light" />
+          <LoopLogo size={32} variant="light" />
         </div>
         <nav>
           <a href="/area" className="active">Tutorial</a>

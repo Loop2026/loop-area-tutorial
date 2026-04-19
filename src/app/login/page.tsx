@@ -10,13 +10,11 @@ export default function LoginPage({
     <main className="min-h-screen grid md:grid-cols-[1.1fr_.9fr] bg-white">
       {/* Colonna sinistra: branding (1.1fr) */}
       <section className="login-art hidden md:flex">
-        <div className="brand">
-          <LoopLogo size={96} variant="light" />
-          <div className="flex flex-col gap-1">
-            <small className="text-white/50 font-semibold text-[10px] tracking-[.18em] uppercase">
-              Area Clienti
-            </small>
-          </div>
+        <div className="brand flex-col items-start gap-2">
+          <LoopLogo size={28} variant="light" />
+          <small className="text-white/55 font-semibold text-[10px] tracking-[.18em] uppercase">
+            Area Clienti
+          </small>
         </div>
 
         <div className="art-copy">
@@ -55,7 +53,7 @@ export default function LoginPage({
         <div className="w-full max-w-md mx-auto">
           {/* Logo mobile (visibile solo < md) */}
           <div className="md:hidden mb-8 flex justify-center">
-            <LoopLogo size={64} />
+            <LoopLogo size={28} />
           </div>
 
           <div className="form-head">
