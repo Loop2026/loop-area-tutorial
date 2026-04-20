@@ -2,15 +2,22 @@
 
 import { useState, useTransition } from "react";
 
-export function NewClientForm() {
+interface Props {
+  adminEmail: string;
+  adminName: string;
+}
+
+type ResultState =
+  | null
+  | { ok: true; email: string; password: string; userId: string }
+  | { ok: false; error: string };
+
+export function NewClientForm({ adminEmail, adminName }: Props) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [result, setResult] = useState<
-    | null
-    | { ok: true; email: string; password: string; userId: string }
-    | { ok: false; error: string }
-  >(null);
+  const [result, setResult] = useState<ResultState>(null);
   const [pending, startTransition] = useTransition();
+  const [copied, setCopied] = useState<string | null>(null);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -19,7 +26,10 @@ export function NewClientForm() {
       const r = await fetch("/api/admin/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), fullName: fullName.trim() })
+        body: JSON.stringify({
+          email: email.trim(),
+          fullName: fullName.trim(),
+        }),
       });
       const j = await r.json();
       if (!r.ok) setResult({ ok: false, error: j.error ?? "Errore" });
@@ -27,85 +37,170 @@ export function NewClientForm() {
     });
   }
 
-  return (
-    <div className="card p-6">
-      {result?.ok ? (
-        <div>
-          <div className="rounded-xl bg-green-50 border border-green-200 text-green-800 p-4 mb-5">
-            <div className="font-bold mb-1">Cliente creato ✓</div>
-            <div className="text-sm">
-              Copia queste credenziali e inviale al cliente. La password viene mostrata UNA SOLA volta.
+  function copy(label: string, value: string) {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(label);
+      setTimeout(() => setCopied(null), 1500);
+    });
+  }
+
+  function buildMailto(): string {
+    if (!result?.ok) return "#";
+    const loginUrl = `${window.location.origin}/login`;
+    const fromName = adminName || "Team LOOP";
+    const subject = encodeURIComponent("Le tue credenziali per l'Area Tutorial LOOP");
+    const body = encodeURIComponent(
+      `Ciao${fullName ? " " + fullName.split(" ")[0] : ""},
+
+ti diamo il benvenuto nell'Area Tutorial LOOP — il percorso di onboarding al sistema di arbitraggio matematico su XAUUSD.
+
+Queste sono le tue credenziali di accesso:
+
+   • Indirizzo: ${loginUrl}
+   • Email:     ${result.email}
+   • Password:  ${result.password}
+
+Per motivi di sicurezza ti consigliamo di cambiare la password al primo accesso.
+
+Se hai domande tecniche o operative scrivimi pure rispondendo a questa email — il servizio di assistenza tecnica LOOP è gratuito.
+
+A presto,
+${fromName}
+${adminEmail}
+`
+    );
+    return `mailto:${result.email}?subject=${subject}&body=${body}`;
+  }
+
+  if (result?.ok) {
+    return (
+      <div className="space-y-5">
+        <div className="a-alert a-alert-ok">
+          <span className="text-lg leading-none">✓</span>
+          <div>
+            <div className="font-bold mb-1">Cliente creato correttamente</div>
+            <div>
+              Le credenziali qui sotto sono mostrate <b>una sola volta</b>. Inviale
+              al cliente con il pulsante &ldquo;Invia via email&rdquo; oppure
+              copiale manualmente.
             </div>
-          </div>
-          <dl className="space-y-3 text-sm">
-            <Field label="Email">{result.email}</Field>
-            <Field label="Password iniziale" mono>
-              {result.password}
-            </Field>
-            <Field label="User ID" mono>
-              {result.userId}
-            </Field>
-          </dl>
-          <div className="mt-6 flex gap-3">
-            <button
-              className="btn-ghost"
-              onClick={() => {
-                setResult(null);
-                setEmail("");
-                setFullName("");
-              }}
-            >
-              Crea un altro
-            </button>
-            <a href="/admin" className="btn-primary">Torna alla dashboard</a>
           </div>
         </div>
-      ) : (
-        <form onSubmit={submit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-ink mb-2">
-              Email cliente
-            </label>
-            <input
-              type="email"
-              required
-              className="field"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="cliente@esempio.com"
-            />
+
+        <div className="a-panel">
+          <div className="a-panel-h">
+            <h2>Credenziali di accesso</h2>
+            <span className="meta">password mostrata UNA volta</span>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-ink mb-2">
-              Nome completo
-            </label>
-            <input
-              type="text"
-              className="field"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Mario Rossi"
-            />
+          <div className="a-panel-b">
+            <dl className="space-y-0">
+              <div className="a-cred-row">
+                <dt>Email</dt>
+                <dd>{result.email}</dd>
+                <button
+                  type="button"
+                  className="a-btn a-btn-ghost text-xs"
+                  onClick={() => copy("email", result.email)}
+                >
+                  {copied === "email" ? "Copiata" : "Copia"}
+                </button>
+              </div>
+              <div className="a-cred-row">
+                <dt>Password</dt>
+                <dd className="mono text-base">{result.password}</dd>
+                <button
+                  type="button"
+                  className="a-btn a-btn-ghost text-xs"
+                  onClick={() => copy("password", result.password)}
+                >
+                  {copied === "password" ? "Copiata" : "Copia"}
+                </button>
+              </div>
+              <div className="a-cred-row">
+                <dt>User ID</dt>
+                <dd className="mono text-xs text-[var(--ink-slate)]">
+                  {result.userId}
+                </dd>
+                <span />
+              </div>
+            </dl>
           </div>
-          {result?.ok === false && (
-            <div className="rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">
-              {result.error}
-            </div>
-          )}
-          <button type="submit" className="btn-primary" disabled={pending}>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          <a
+            href={buildMailto()}
+            className="a-btn a-btn-primary"
+            target="_blank"
+            rel="noopener"
+          >
+            ✉ Invia credenziali via email
+          </a>
+          <button
+            type="button"
+            className="a-btn a-btn-ghost"
+            onClick={() => {
+              setResult(null);
+              setEmail("");
+              setFullName("");
+            }}
+          >
+            Crea un altro cliente
+          </button>
+          <a href="/admin" className="a-btn a-btn-ghost">
+            Torna alla panoramica
+          </a>
+        </div>
+
+        <p className="text-xs text-[var(--ink-slate)]">
+          Il bottone &ldquo;Invia&rdquo; apre il tuo client email predefinito
+          (Mail / Gmail / Outlook) con destinatario, oggetto e corpo già
+          compilati. Premi &ldquo;Invia&rdquo; nel client per spedire.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="a-panel">
+      <div className="a-panel-b space-y-4">
+        <div>
+          <label className="a-label">Email cliente</label>
+          <input
+            type="email"
+            required
+            className="a-field"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="cliente@esempio.com"
+          />
+        </div>
+        <div>
+          <label className="a-label">Nome completo</label>
+          <input
+            type="text"
+            className="a-field"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Mario Rossi"
+          />
+        </div>
+        {result?.ok === false && (
+          <div className="a-alert a-alert-err">
+            <span>⚠</span>
+            <div>{result.error}</div>
+          </div>
+        )}
+        <div className="pt-2">
+          <button
+            type="submit"
+            className="a-btn a-btn-primary"
+            disabled={pending}
+          >
             {pending ? "Creazione…" : "Crea cliente"}
           </button>
-        </form>
-      )}
-    </div>
-  );
-}
-
-function Field({ label, children, mono }: { label: string; children: React.ReactNode; mono?: boolean }) {
-  return (
-    <div className="grid grid-cols-[140px_1fr] items-center gap-3 border-b border-paper-border pb-2">
-      <dt className="text-xs uppercase tracking-wider text-ink-muted">{label}</dt>
-      <dd className={["text-ink", mono ? "font-mono" : ""].join(" ")}>{children}</dd>
-    </div>
+        </div>
+      </div>
+    </form>
   );
 }

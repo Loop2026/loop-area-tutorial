@@ -64,6 +64,9 @@ export default async function AreaPage() {
           <a href="#progress">Progresso</a>
           <a href="#checklist">Checklist</a>
           <a href="#support">Supporto</a>
+          {profile?.role === "admin" && (
+            <a href="/admin" className="admin-link">Admin</a>
+          )}
         </nav>
         <div className="flex items-center gap-3">
           <div className="user-chip">

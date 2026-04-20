@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { Sidebar } from "@/components/Sidebar";
+import { AdminTopbar } from "@/components/AdminTopbar";
 import type { Profile } from "@/lib/types";
 
 interface ClientRow {
   user_id: string;
   email: string;
   full_name: string | null;
+  status?: "active" | "disabled" | null;
   joined_at: string;
   last_login_at: string | null;
   modules_done: number;
@@ -41,93 +42,154 @@ export default async function AdminHome() {
       ? Date.now() - new Date(r.last_activity_at).getTime() < 7 * 86400000
       : false
   ).length;
-  const avgProgress = Math.round(
-    rows.reduce((sum, r) => sum + (r.modules_total ? r.modules_done / r.modules_total : 0), 0) /
-      Math.max(rows.length, 1) *
-      100
-  );
+  const disabled = rows.filter((r) => r.status === "disabled").length;
+  const avgProgress =
+    rows.length > 0
+      ? Math.round(
+          (rows.reduce(
+            (sum, r) =>
+              sum + (r.modules_total ? r.modules_done / r.modules_total : 0),
+            0
+          ) /
+            rows.length) *
+            100
+        )
+      : 0;
 
   return (
-    <div className="flex min-h-screen bg-paper-soft">
-      <Sidebar
-        role="admin"
+    <div className="min-h-screen bg-[var(--off)]">
+      <AdminTopbar
         fullName={profile.full_name ?? ""}
         email={profile.email}
+        active="clients"
       />
-      <main className="flex-1 p-6 md:p-10 max-w-7xl mx-auto w-full">
+
+      <div className="admin-page">
         <header className="mb-8 flex items-end justify-between flex-wrap gap-4">
           <div>
-            <div className="text-xs tracking-widest text-blue-m uppercase">
-              Admin Console
+            <div className="admin-eyebrow">
+              <span className="d" />
+              ADMIN CONSOLE · CLIENTI
             </div>
-            <h1 className="text-3xl font-bold text-ink">Panoramica clienti</h1>
-            <p className="text-ink-muted mt-1">
-              Stato onboarding di tutti i clienti LOOP.
+            <h1 className="admin-h1">
+              Panoramica <em>clienti</em>.
+            </h1>
+            <p className="text-[15px] text-[var(--ink-slate)] mt-2 max-w-2xl">
+              Stato onboarding di tutti i clienti LOOP. Da qui puoi creare
+              nuovi account, vedere il progresso e gestire le credenziali.
             </p>
           </div>
-          <Link href="/admin/new-client" className="btn-primary">
-            + Nuovo cliente
-          </Link>
+          <div className="flex gap-3">
+            <Link href="/admin/modules" className="a-btn a-btn-ghost">
+              Gestisci moduli
+            </Link>
+            <Link href="/admin/new-client" className="a-btn a-btn-primary">
+              + Nuovo cliente
+            </Link>
+          </div>
         </header>
 
         {/* KPI */}
-        <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-          <Kpi label="Clienti totali" value={totalClients.toString()} />
-          <Kpi label="Attivi ultimi 7 gg" value={activeLast7.toString()} />
-          <Kpi label="Progresso medio" value={`${avgProgress}%`} />
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="a-kpi">
+            <div className="lbl">Clienti totali</div>
+            <div className="val">{totalClients}</div>
+            <div className="sub">In anagrafica</div>
+          </div>
+          <div className="a-kpi">
+            <div className="lbl">Attivi 7 gg</div>
+            <div className="val">{activeLast7}</div>
+            <div className="sub">Hanno aperto l&apos;area</div>
+          </div>
+          <div className="a-kpi">
+            <div className="lbl">Progresso medio</div>
+            <div className="val">{avgProgress}%</div>
+            <div className="sub">Su {totalClients || 0} clienti</div>
+          </div>
+          <div className="a-kpi">
+            <div className="lbl">Disattivati</div>
+            <div className="val">{disabled}</div>
+            <div className="sub">Accesso sospeso</div>
+          </div>
         </section>
 
         {/* Tabella clienti */}
-        <section className="card overflow-hidden">
-          <header className="px-6 py-4 border-b border-paper-border flex items-center justify-between">
-            <h2 className="font-bold text-ink">Clienti</h2>
-            <span className="text-sm text-ink-muted">{rows.length}</span>
-          </header>
+        <section className="a-panel overflow-hidden">
+          <div className="a-panel-h">
+            <h2>Clienti</h2>
+            <span className="meta">{rows.length} record</span>
+          </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-paper-soft text-left text-xs uppercase tracking-wider text-ink-muted">
+            <table className="a-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3">Nome</th>
-                  <th className="px-6 py-3">Email</th>
-                  <th className="px-6 py-3">Progresso</th>
-                  <th className="px-6 py-3">Checklist</th>
-                  <th className="px-6 py-3">Ultima attività</th>
-                  <th className="px-6 py-3"></th>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Stato</th>
+                  <th>Progresso</th>
+                  <th>Checklist</th>
+                  <th>Ultima attività</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-ink-muted">
+                    <td colSpan={7} className="text-center text-[var(--ink-slate)] py-12">
                       Nessun cliente ancora. Crea il primo con &ldquo;+ Nuovo cliente&rdquo;.
                     </td>
                   </tr>
                 )}
                 {rows.map((c) => {
                   const pct =
-                    c.modules_total > 0 ? Math.round((c.modules_done / c.modules_total) * 100) : 0;
+                    c.modules_total > 0
+                      ? Math.round((c.modules_done / c.modules_total) * 100)
+                      : 0;
+                  const status = c.status ?? "active";
                   return (
-                    <tr key={c.user_id} className="border-t border-paper-border hover:bg-paper-soft">
-                      <td className="px-6 py-3 font-medium text-ink">
-                        {c.full_name ?? <span className="text-ink-muted italic">—</span>}
+                    <tr key={c.user_id}>
+                      <td className="font-semibold text-[var(--navy)]">
+                        {c.full_name ?? (
+                          <span className="text-[var(--ink-slate)] italic font-normal">
+                            —
+                          </span>
+                        )}
                       </td>
-                      <td className="px-6 py-3 text-ink-muted">{c.email}</td>
-                      <td className="px-6 py-3">
+                      <td className="text-[var(--ink-slate)]">{c.email}</td>
+                      <td>
+                        {status === "active" ? (
+                          <span className="pill pill-ok">
+                            <span className="d" />
+                            Attivo
+                          </span>
+                        ) : (
+                          <span className="pill pill-off">
+                            <span className="d" />
+                            Sospeso
+                          </span>
+                        )}
+                      </td>
+                      <td>
                         <div className="flex items-center gap-2">
-                          <div className="progress-bar w-32"><span style={{ width: `${pct}%` }} /></div>
-                          <span className="text-xs text-ink-muted w-14">
+                          <div className="progress-bar w-28">
+                            <span style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-[var(--ink-slate)] w-12">
                             {c.modules_done}/{c.modules_total}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-3 text-sm text-ink">
+                      <td className="text-sm">
                         {c.checklist_done}/{c.checklist_total}
                       </td>
-                      <td className="px-6 py-3 text-sm text-ink-muted">
+                      <td className="text-sm text-[var(--ink-slate)]">
                         {fmtRelative(c.last_activity_at)}
                       </td>
-                      <td className="px-6 py-3 text-right">
-                        <Link href={`/admin/clients/${c.user_id}`} className="text-blue-m font-medium hover:underline">
+                      <td className="text-right">
+                        <Link
+                          href={`/admin/clients/${c.user_id}`}
+                          className="text-[var(--blue-m)] font-semibold hover:underline"
+                        >
                           Dettaglio →
                         </Link>
                       </td>
@@ -138,16 +200,7 @@ export default async function AdminHome() {
             </table>
           </div>
         </section>
-      </main>
-    </div>
-  );
-}
-
-function Kpi({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="card p-5">
-      <div className="text-xs tracking-wider text-ink-muted uppercase">{label}</div>
-      <div className="text-3xl font-bold text-ink mt-1">{value}</div>
+      </div>
     </div>
   );
 }

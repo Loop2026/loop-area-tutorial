@@ -3,12 +3,14 @@
 // =====================================================
 
 export type Role = "client" | "admin";
+export type ProfileStatus = "active" | "disabled";
 
 export interface Profile {
   id: string;
   email: string;
   full_name: string | null;
   role: Role;
+  status: ProfileStatus;
   created_at: string;
   last_login_at: string | null;
   metadata: Record<string, unknown>;

@@ -58,7 +58,7 @@ export default function LoginPage({
 
           <div className="form-head">
             <span className="eyebrow">Accedi</span>
-            <h2>Bentornato.</h2>
+            <h2>Benvenuto nell&apos;Area Tutorial</h2>
             <p>
               Inserisci le credenziali ricevute via email dopo l&apos;attivazione del
               tuo contratto. Se hai problemi, il team risponde entro 24 ore lavorative.
