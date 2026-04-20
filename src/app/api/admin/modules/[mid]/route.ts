@@ -3,7 +3,12 @@ import { createClient, createAdminClient } from "@/lib/supabase/server";
 import type { Chapter, ResourceLink } from "@/lib/types";
 
 // PATCH /api/admin/modules/[mid]
-// Body: { bunny_video_id?: string | null, published?: boolean, chapters?: Chapter[], resources?: ResourceLink[] }
+// Body: {
+//   title?: string, description?: string, duration?: string,
+//   level?: string, order_index?: number,
+//   bunny_video_id?: string | null, published?: boolean,
+//   chapters?: Chapter[], resources?: ResourceLink[]
+// }
 export async function PATCH(
   req: Request,
   ctx: { params: Promise<{ mid: string }> }
@@ -22,6 +27,11 @@ export async function PATCH(
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
 
   const body = (await req.json().catch(() => ({}))) as Partial<{
+    title: string;
+    description: string;
+    duration: string;
+    level: string;
+    order_index: number;
     bunny_video_id: string | null;
     published: boolean;
     chapters: Chapter[];
@@ -30,6 +40,23 @@ export async function PATCH(
 
   const patch: Record<string, unknown> = {};
 
+  if (typeof body.title === "string") {
+    const t = body.title.trim().slice(0, 160);
+    if (t) patch.title = t;
+  }
+  if (typeof body.description === "string") {
+    patch.description = body.description.trim().slice(0, 2000);
+  }
+  if (typeof body.duration === "string") {
+    const d = body.duration.trim();
+    if (!d || /^\d{1,3}:\d{2}$/.test(d)) patch.duration = d;
+  }
+  if (typeof body.level === "string") {
+    patch.level = body.level.trim().slice(0, 40);
+  }
+  if (typeof body.order_index === "number" && Number.isFinite(body.order_index)) {
+    patch.order_index = Math.max(0, Math.floor(body.order_index));
+  }
   if ("bunny_video_id" in body) {
     patch.bunny_video_id = body.bunny_video_id || null;
   }

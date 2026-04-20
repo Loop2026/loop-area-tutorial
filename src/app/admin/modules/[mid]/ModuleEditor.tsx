@@ -8,6 +8,13 @@ interface Props {
 }
 
 export function ModuleEditor({ module: initialMod }: Props) {
+  const [title, setTitle] = useState(initialMod.title ?? "");
+  const [description, setDescription] = useState(initialMod.description ?? "");
+  const [duration, setDuration] = useState(initialMod.duration ?? "");
+  const [level, setLevel] = useState(initialMod.level ?? "");
+  const [orderIndex, setOrderIndex] = useState<number>(
+    Number.isFinite(initialMod.order_index) ? initialMod.order_index : 0
+  );
   const [bunnyId, setBunnyId] = useState(initialMod.bunny_video_id ?? "");
   const [published, setPublished] = useState(initialMod.published);
   const [chapters, setChapters] = useState<Chapter[]>(
@@ -96,6 +103,11 @@ export function ModuleEditor({ module: initialMod }: Props) {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          duration: duration.trim(),
+          level: level.trim(),
+          order_index: Number.isFinite(orderIndex) ? orderIndex : 0,
           bunny_video_id: bunnyId.trim() || null,
           published,
           chapters: cleanChapters,
@@ -115,6 +127,81 @@ export function ModuleEditor({ module: initialMod }: Props) {
 
   return (
     <div className="space-y-6">
+      {/* Dettagli modulo */}
+      <div className="a-panel">
+        <div className="a-panel-h">
+          <h2>Dettagli modulo</h2>
+          <span className="meta">titolo, descrizione, durata, ordine</span>
+        </div>
+        <div className="a-panel-b space-y-4">
+          <div>
+            <label className="a-label">Titolo</label>
+            <input
+              type="text"
+              className="a-field"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={160}
+              placeholder="Es. Modulo 1 — Introduzione all'arbitraggio"
+            />
+          </div>
+          <div>
+            <label className="a-label">Descrizione</label>
+            <textarea
+              className="a-field"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={2000}
+              placeholder="Breve descrizione visibile ai clienti in card e hero"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="a-label">Durata (mm:ss)</label>
+              <input
+                type="text"
+                className="a-field font-mono"
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                placeholder="12:30"
+                pattern="^\d{1,3}:\d{2}$"
+              />
+              <p className="text-xs text-[var(--ink-slate)] mt-1">
+                Formato mm:ss (es. 12:30).
+              </p>
+            </div>
+            <div>
+              <label className="a-label">Livello</label>
+              <input
+                type="text"
+                className="a-field"
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                maxLength={40}
+                placeholder="Base · Intermedio · Avanzato"
+              />
+            </div>
+            <div>
+              <label className="a-label">Ordine</label>
+              <input
+                type="number"
+                min={0}
+                step={1}
+                className="a-field font-mono"
+                value={orderIndex}
+                onChange={(e) =>
+                  setOrderIndex(Math.max(0, Number(e.target.value) || 0))
+                }
+              />
+              <p className="text-xs text-[var(--ink-slate)] mt-1">
+                Posizione in lista (0, 1, 2…).
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Status bar */}
       <div className="a-panel">
         <div className="a-panel-h">
