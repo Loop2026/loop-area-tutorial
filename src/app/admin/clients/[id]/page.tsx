@@ -137,8 +137,6 @@ export default async function ClientDetail({
           clientEmail={client.email}
           clientName={client.full_name ?? ""}
           initialStatus={status}
-          adminName={me.full_name ?? ""}
-          adminEmail={me.email}
         />
 
         <section className="grid md:grid-cols-2 gap-6 mb-8 mt-8">

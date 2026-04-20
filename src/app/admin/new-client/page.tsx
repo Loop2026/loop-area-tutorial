@@ -47,10 +47,7 @@ export default async function NewClient() {
           </p>
         </header>
 
-        <NewClientForm
-          adminEmail={me.email}
-          adminName={me.full_name ?? ""}
-        />
+        <NewClientForm />
       </div>
     </div>
   );

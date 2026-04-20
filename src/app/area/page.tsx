@@ -61,9 +61,8 @@ export default async function AreaPage() {
         </div>
         <nav>
           <a href="/area" className="active">Tutorial</a>
-          <a href="#progress">Progresso</a>
           <a href="#checklist">Checklist</a>
-          <a href="mailto:luca@lucadigioia.ch?subject=Supporto%20Area%20Tutorial%20LOOP">Supporto</a>
+          <a href="mailto:support@loop-online.com?subject=Supporto%20Area%20Tutorial%20LOOP">Supporto</a>
           {profile?.role === "admin" && (
             <a href="/admin" className="admin-link">Admin</a>
           )}
@@ -219,7 +218,7 @@ export default async function AreaPage() {
               Nessuna vendita, nessuna commissione. Risposta entro 24 ore lavorative.
             </p>
           </div>
-          <a href="mailto:luca@lucadigioia.ch" className="btn btn-primary">
+          <a href="mailto:support@loop-online.com?subject=Supporto%20Area%20Tutorial%20LOOP" className="btn btn-primary">
             Scrivi al supporto
           </a>
         </section>

@@ -74,9 +74,9 @@ export default function LoginPage({
               vendita, nessuna commissione. Per richiedere un accesso scrivi a{" "}
               <a
                 className="text-blue-m font-semibold hover:underline"
-                href="mailto:luca@lucadigioia.ch"
+                href="mailto:support@loop-online.com"
               >
-                luca@lucadigioia.ch
+                support@loop-online.com
               </a>
               .
             </small>

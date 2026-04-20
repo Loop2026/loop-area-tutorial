@@ -2,17 +2,12 @@
 
 import { useState, useTransition } from "react";
 
-interface Props {
-  adminEmail: string;
-  adminName: string;
-}
-
 type ResultState =
   | null
   | { ok: true; email: string; password: string; userId: string }
   | { ok: false; error: string };
 
-export function NewClientForm({ adminEmail, adminName }: Props) {
+export function NewClientForm() {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
   const [result, setResult] = useState<ResultState>(null);
@@ -47,7 +42,6 @@ export function NewClientForm({ adminEmail, adminName }: Props) {
   function buildMailto(): string {
     if (!result?.ok) return "#";
     const loginUrl = `${window.location.origin}/login`;
-    const fromName = adminName || "Team LOOP";
     const subject = encodeURIComponent("Le tue credenziali per l'Area Tutorial LOOP");
     const body = encodeURIComponent(
       `Ciao${fullName ? " " + fullName.split(" ")[0] : ""},
@@ -62,11 +56,11 @@ Queste sono le tue credenziali di accesso:
 
 Per motivi di sicurezza ti consigliamo di cambiare la password al primo accesso.
 
-Se hai domande tecniche o operative scrivimi pure rispondendo a questa email — il servizio di assistenza tecnica LOOP è gratuito.
+Se hai domande tecniche o operative scrivi a support@loop-online.com — il servizio di assistenza tecnica LOOP è gratuito.
 
 A presto,
-${fromName}
-${adminEmail}
+Supporto LOOP
+support@loop-online.com
 `
     );
     return `mailto:${result.email}?subject=${subject}&body=${body}`;

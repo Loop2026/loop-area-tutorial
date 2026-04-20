@@ -7,8 +7,6 @@ interface Props {
   clientEmail: string;
   clientName: string;
   initialStatus: "active" | "disabled";
-  adminName: string;
-  adminEmail: string;
 }
 
 export function ClientActions({
@@ -16,8 +14,6 @@ export function ClientActions({
   clientEmail,
   clientName,
   initialStatus,
-  adminName,
-  adminEmail,
 }: Props) {
   const [status, setStatus] = useState<"active" | "disabled">(initialStatus);
   const [pending, startTransition] = useTransition();
@@ -78,12 +74,11 @@ export function ClientActions({
   function buildMailtoCredentials(): string {
     if (!newPwd) return "#";
     const loginUrl = `${window.location.origin}/login`;
-    const fromName = adminName || "Team LOOP";
     const subject = encodeURIComponent("Nuova password Area Tutorial LOOP");
     const body = encodeURIComponent(
       `Ciao${clientName ? " " + clientName.split(" ")[0] : ""},
 
-ti ho generato una nuova password per accedere all'Area Tutorial LOOP:
+abbiamo generato una nuova password per accedere all'Area Tutorial LOOP:
 
    • Indirizzo: ${loginUrl}
    • Email:     ${clientEmail}
@@ -92,8 +87,8 @@ ti ho generato una nuova password per accedere all'Area Tutorial LOOP:
 Per sicurezza ti consigliamo di cambiarla al primo accesso.
 
 A presto,
-${fromName}
-${adminEmail}
+Supporto LOOP
+support@loop-online.com
 `
     );
     return `mailto:${clientEmail}?subject=${subject}&body=${body}`;
