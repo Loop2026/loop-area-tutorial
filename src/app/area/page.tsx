@@ -63,7 +63,7 @@ export default async function AreaPage() {
           <a href="/area" className="active">Tutorial</a>
           <a href="#progress">Progresso</a>
           <a href="#checklist">Checklist</a>
-          <a href="#support">Supporto</a>
+          <a href="mailto:luca@lucadigioia.ch?subject=Supporto%20Area%20Tutorial%20LOOP">Supporto</a>
           {profile?.role === "admin" && (
             <a href="/admin" className="admin-link">Admin</a>
           )}
@@ -93,7 +93,7 @@ export default async function AreaPage() {
             ONBOARDING · STEP {stepNumber} DI {total || 6}
           </div>
           <h1>
-            Bentornato, <em>{firstName(display)}</em>.
+            Benvenuto nell&apos;<em>Area Tutorial</em>.
           </h1>
           <p>
             Hai completato {done} {done === 1 ? "modulo" : "moduli"} su {total || 6}.
@@ -229,9 +229,6 @@ export default async function AreaPage() {
 }
 
 /* -------- utils -------- */
-function firstName(s: string) {
-  return (s.split(" ")[0] || s.split("@")[0] || "").trim();
-}
 function shortName(s: string) {
   const parts = s.trim().split(/\s+/);
   if (parts.length >= 2) return `${parts[0]} ${parts[1][0]}.`;
