@@ -54,7 +54,8 @@ export default function LoginPage({
             <h2>Benvenuto nell&apos;Area Tutorial</h2>
             <p>
               Seleziona il tipo di accesso, poi inserisci le credenziali fornite
-              dal team LOOP. Se hai problemi, rispondiamo entro 24 ore lavorative.
+              dal team LOOP. Se hai problemi, contatta l&apos;assistenza sul
+              canale Telegram.
             </p>
           </div>
 
@@ -63,8 +64,8 @@ export default function LoginPage({
           <div className="mfa-note mt-6">
             <div className="d" />
             <small>
-              <b>Servizio gratuito di assistenza tecnica LOOP.</b> Nessuna
-              vendita, nessuna commissione. Per richiedere un accesso scrivi a{" "}
+              Se non hai ricevuto le credenziali di accesso, per richiederle
+              scrivi a{" "}
               <a
                 className="text-blue-m font-semibold hover:underline"
                 href="mailto:support@loop-online.com"
