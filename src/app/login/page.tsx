@@ -12,9 +12,6 @@ export default function LoginPage({
       <section className="login-art hidden md:flex">
         <div className="brand flex-col items-start gap-2">
           <LoopLogo size={28} variant="light" />
-          <small className="text-white/55 font-semibold text-[10px] tracking-[.18em] uppercase">
-            Area Clienti
-          </small>
         </div>
 
         <div className="art-copy">
