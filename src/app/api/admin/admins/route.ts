@@ -23,7 +23,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data: rows, error } = await admin
     .from("profiles")
-    .select("id, email, full_name, role, status, created_at, last_login_at")
+    .select("id, email, full_name, first_name, last_name, role, status, created_at, last_login_at")
     .eq("role", "admin")
     .order("created_at", { ascending: true });
 
@@ -34,8 +34,8 @@ export async function GET() {
 
 // =====================================================
 // POST /api/admin/admins
-// Body: { email, fullName? }
-// Crea un admin con password temporanea auto-generata.
+// Body: { email, firstName?, lastName?, password? }
+// Se password non viene passata, la generiamo noi.
 // Nessuna email inviata da Supabase — l'admin che crea
 // comunica manualmente le credenziali al destinatario.
 // =====================================================
@@ -55,7 +55,9 @@ export async function POST(req: Request) {
 
   const body = (await req.json().catch(() => ({}))) as Partial<{
     email: string;
-    fullName: string;
+    firstName: string;
+    lastName: string;
+    password: string;
   }>;
 
   const email = body.email?.trim().toLowerCase();
@@ -63,8 +65,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "email non valida" }, { status: 400 });
   }
 
-  const fullName = body.fullName?.trim() || null;
-  const password = genTempPassword();
+  const firstName = body.firstName?.trim() || null;
+  const lastName = body.lastName?.trim() || null;
+  const fullName = [firstName, lastName].filter(Boolean).join(" ") || null;
+
+  // Password: se passata dev'essere >= 10 caratteri, altrimenti la generiamo noi
+  let password = body.password?.trim();
+  if (password) {
+    if (password.length < 10) {
+      return NextResponse.json(
+        { error: "la password deve essere di almeno 10 caratteri" },
+        { status: 400 }
+      );
+    }
+  } else {
+    password = genTempPassword();
+  }
 
   const admin = createAdminClient();
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -78,10 +94,16 @@ export async function POST(req: Request) {
   }
 
   // Il trigger handle_new_user crea profili con role='client' di default.
-  // Promuoviamo subito ad admin.
+  // Promuoviamo subito ad admin e settiamo first/last name.
   await admin
     .from("profiles")
-    .update({ role: "admin", full_name: fullName, status: "active" })
+    .update({
+      role: "admin",
+      first_name: firstName,
+      last_name: lastName,
+      full_name: fullName,
+      status: "active",
+    })
     .eq("id", created.user!.id);
 
   await logAudit({
@@ -89,7 +111,7 @@ export async function POST(req: Request) {
     targetType: "user",
     targetId: created.user!.id,
     targetLabel: email,
-    metadata: { fullName },
+    metadata: { firstName, lastName },
   });
 
   return NextResponse.json({

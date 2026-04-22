@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 interface Props {
   clientId: string;
@@ -15,11 +16,42 @@ export function ClientActions({
   clientName,
   initialStatus,
 }: Props) {
+  const router = useRouter();
   const [status, setStatus] = useState<"active" | "disabled">(initialStatus);
   const [pending, startTransition] = useTransition();
   const [newPwd, setNewPwd] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  function deleteClient() {
+    if (
+      !confirm(
+        `Eliminare definitivamente ${clientEmail}? L'operazione è irreversibile: progressi, checklist e dati collegati verranno persi.`
+      )
+    )
+      return;
+    if (
+      !confirm(
+        `Confermi l'eliminazione di ${clientEmail}? Seconda conferma richiesta per sicurezza.`
+      )
+    )
+      return;
+    setError(null);
+    setInfo(null);
+    setNewPwd(null);
+    startTransition(async () => {
+      const r = await fetch(`/api/admin/clients/${clientId}`, {
+        method: "DELETE",
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        setError(j.error ?? "Errore durante l'eliminazione");
+        return;
+      }
+      router.replace("/admin/clients");
+      router.refresh();
+    });
+  }
 
   function toggleStatus() {
     const next = status === "active" ? "disabled" : "active";
@@ -148,6 +180,15 @@ support@loop-online.com
           >
             ✉ Scrivi al cliente
           </a>
+
+          <button
+            type="button"
+            className="a-btn a-btn-danger ml-auto"
+            onClick={deleteClient}
+            disabled={pending}
+          >
+            🗑 Elimina cliente
+          </button>
         </div>
 
         {error && (

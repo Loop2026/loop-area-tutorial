@@ -13,7 +13,10 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
   const router = useRouter();
   const [admins, setAdmins] = useState<AdminRow[]>(initialAdmins);
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [customPassword, setCustomPassword] = useState("");
+  const [usePasswordCustom, setUsePasswordCustom] = useState(false);
   const [busy, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<
     | { kind: "ok"; text: string }
@@ -31,13 +34,23 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
     setFeedback(null);
     setNewCredentials(null);
 
+    if (usePasswordCustom && customPassword.trim().length < 10) {
+      setFeedback({
+        kind: "err",
+        text: "La password personalizzata deve essere di almeno 10 caratteri.",
+      });
+      return;
+    }
+
     startTransition(async () => {
       const res = await fetch("/api/admin/admins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
-          fullName: fullName.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          password: usePasswordCustom ? customPassword.trim() : undefined,
         }),
       });
       const json = await res.json();
@@ -53,7 +66,10 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
         label: "Admin creato",
       });
       setEmail("");
-      setFullName("");
+      setFirstName("");
+      setLastName("");
+      setCustomPassword("");
+      setUsePasswordCustom(false);
       router.refresh();
     });
   }
@@ -102,6 +118,15 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
     };
     if (!confirm(messages[action])) return;
 
+    if (action === "delete") {
+      if (
+        !confirm(
+          `Sei sicuro di voler eliminare ${label}? Tutti i dati associati (progressi, checklist, log) verranno persi. Conferma una seconda volta per procedere.`
+        )
+      )
+        return;
+    }
+
     setFeedback(null);
     setNewCredentials(null);
     startTransition(async () => {
@@ -145,6 +170,16 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
     setTimeout(() => setFeedback(null), 2000);
   }
 
+  function generateSuggestion() {
+    const alphabet =
+      "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let out = "";
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < 12; i++) out += alphabet[bytes[i] % alphabet.length];
+    setCustomPassword(out);
+  }
+
   function buildMailto(toEmail: string, password: string) {
     const loginUrl =
       typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
@@ -174,13 +209,14 @@ Team LOOP
       <section className="a-panel mb-8">
         <div className="a-panel-h">
           <h2>Nuovo amministratore</h2>
-          <span className="meta">password generata in automatico</span>
+          <span className="meta">
+            {usePasswordCustom ? "password custom" : "password auto-generata"}
+          </span>
         </div>
         <div className="a-panel-b">
           <p className="text-sm text-[var(--ink-slate)] mb-4">
-            Inserisci email e nome dell&apos;admin. L&apos;account viene creato
-            subito, già confermato: riceverai la password temporanea qui sotto
-            da comunicare manualmente.
+            Inserisci email, nome e cognome. Puoi lasciare che il sistema
+            generi una password temporanea oppure impostarla tu manualmente.
             <strong> Nessuna email viene inviata da Supabase.</strong>
           </p>
 
@@ -188,7 +224,7 @@ Team LOOP
             onSubmit={submitNew}
             className="grid grid-cols-1 md:grid-cols-2 gap-4"
           >
-            <label className="text-sm">
+            <label className="text-sm md:col-span-2">
               <span className="block text-[var(--ink-slate)] mb-1">
                 Email *
               </span>
@@ -202,17 +238,62 @@ Team LOOP
               />
             </label>
             <label className="text-sm">
-              <span className="block text-[var(--ink-slate)] mb-1">
-                Nome completo
-              </span>
+              <span className="block text-[var(--ink-slate)] mb-1">Nome</span>
               <input
                 type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Es. Luca Rossi"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Luca"
                 className="a-field w-full"
               />
             </label>
+            <label className="text-sm">
+              <span className="block text-[var(--ink-slate)] mb-1">Cognome</span>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Rossi"
+                className="a-field w-full"
+              />
+            </label>
+
+            <div className="md:col-span-2 border-t pt-4">
+              <label className="inline-flex items-center gap-2 text-sm mb-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={usePasswordCustom}
+                  onChange={(e) => setUsePasswordCustom(e.target.checked)}
+                />
+                <span>Voglio impostare io la password</span>
+              </label>
+              {usePasswordCustom && (
+                <div className="flex flex-wrap items-center gap-2 mt-2">
+                  <input
+                    type="text"
+                    value={customPassword}
+                    onChange={(e) => setCustomPassword(e.target.value)}
+                    placeholder="Almeno 10 caratteri"
+                    className="a-field flex-1 min-w-[220px] font-mono text-sm"
+                    minLength={10}
+                  />
+                  <button
+                    type="button"
+                    onClick={generateSuggestion}
+                    className="a-btn a-btn-ghost text-xs"
+                  >
+                    Suggerisci
+                  </button>
+                </div>
+              )}
+              {!usePasswordCustom && (
+                <p className="text-xs text-[var(--ink-slate)]">
+                  Verrà generata una password temporanea di 12 caratteri
+                  casuali — la vedrai una volta sola qui sotto.
+                </p>
+              )}
+            </div>
+
             <div className="md:col-span-2">
               <button type="submit" className="a-btn a-btn-primary" disabled={busy}>
                 {busy ? "Creo…" : "Crea admin"}
@@ -301,10 +382,13 @@ Team LOOP
               {admins.map((a) => {
                 const isMe = a.id === currentUserId;
                 const disabled = a.status === "disabled";
+                const displayName =
+                  [a.first_name, a.last_name].filter(Boolean).join(" ") ||
+                  a.full_name;
                 return (
                   <tr key={a.id}>
                     <td className="font-semibold text-[var(--navy)]">
-                      {a.full_name ?? (
+                      {displayName ?? (
                         <span className="text-[var(--ink-slate)] italic font-normal">
                           —
                         </span>

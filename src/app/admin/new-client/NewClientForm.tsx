@@ -9,7 +9,10 @@ type ResultState =
 
 export function NewClientForm() {
   const [email, setEmail] = useState("");
-  const [fullName, setFullName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [customPassword, setCustomPassword] = useState("");
+  const [usePasswordCustom, setUsePasswordCustom] = useState(false);
   const [result, setResult] = useState<ResultState>(null);
   const [pending, startTransition] = useTransition();
   const [copied, setCopied] = useState<string | null>(null);
@@ -17,13 +20,24 @@ export function NewClientForm() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setResult(null);
+
+    if (usePasswordCustom && customPassword.trim().length < 10) {
+      setResult({
+        ok: false,
+        error: "La password personalizzata deve essere di almeno 10 caratteri.",
+      });
+      return;
+    }
+
     startTransition(async () => {
       const r = await fetch("/api/admin/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: email.trim(),
-          fullName: fullName.trim(),
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          password: usePasswordCustom ? customPassword.trim() : undefined,
         }),
       });
       const j = await r.json();
@@ -39,12 +53,25 @@ export function NewClientForm() {
     });
   }
 
+  function generateSuggestion() {
+    const alphabet =
+      "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let out = "";
+    const bytes = new Uint8Array(12);
+    crypto.getRandomValues(bytes);
+    for (let i = 0; i < 12; i++) out += alphabet[bytes[i] % alphabet.length];
+    setCustomPassword(out);
+  }
+
   function buildMailto(): string {
     if (!result?.ok) return "#";
     const loginUrl = `${window.location.origin}/login`;
-    const subject = encodeURIComponent("Le tue credenziali per l'Area Tutorial LOOP");
+    const subject = encodeURIComponent(
+      "Le tue credenziali per l'Area Tutorial LOOP"
+    );
+    const greetName = firstName || "";
     const body = encodeURIComponent(
-      `Ciao${fullName ? " " + fullName.split(" ")[0] : ""},
+      `Ciao${greetName ? " " + greetName : ""},
 
 ti diamo il benvenuto nell'Area Tutorial LOOP — il percorso di onboarding al sistema di arbitraggio matematico su XAUUSD.
 
@@ -136,7 +163,10 @@ support@loop-online.com
             onClick={() => {
               setResult(null);
               setEmail("");
-              setFullName("");
+              setFirstName("");
+              setLastName("");
+              setCustomPassword("");
+              setUsePasswordCustom(false);
             }}
           >
             Crea un altro cliente
@@ -169,16 +199,64 @@ support@loop-online.com
             placeholder="cliente@esempio.com"
           />
         </div>
-        <div>
-          <label className="a-label">Nome completo</label>
-          <input
-            type="text"
-            className="a-field"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Mario Rossi"
-          />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="a-label">Nome</label>
+            <input
+              type="text"
+              className="a-field"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Mario"
+            />
+          </div>
+          <div>
+            <label className="a-label">Cognome</label>
+            <input
+              type="text"
+              className="a-field"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Rossi"
+            />
+          </div>
         </div>
+
+        <div className="border-t pt-4">
+          <label className="inline-flex items-center gap-2 text-sm mb-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={usePasswordCustom}
+              onChange={(e) => setUsePasswordCustom(e.target.checked)}
+            />
+            <span>Voglio impostare io la password</span>
+          </label>
+          {usePasswordCustom ? (
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <input
+                type="text"
+                value={customPassword}
+                onChange={(e) => setCustomPassword(e.target.value)}
+                placeholder="Almeno 10 caratteri"
+                className="a-field flex-1 min-w-[220px] font-mono text-sm"
+                minLength={10}
+              />
+              <button
+                type="button"
+                onClick={generateSuggestion}
+                className="a-btn a-btn-ghost text-xs"
+              >
+                Suggerisci
+              </button>
+            </div>
+          ) : (
+            <p className="text-xs text-[var(--ink-slate)]">
+              Verrà generata automaticamente una password temporanea di 12
+              caratteri casuali — la vedrai una volta sola dopo la creazione.
+            </p>
+          )}
+        </div>
+
         {result?.ok === false && (
           <div className="a-alert a-alert-err">
             <span>⚠</span>

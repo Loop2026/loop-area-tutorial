@@ -8,6 +8,8 @@ export interface AdminRow {
   id: string;
   email: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   role: "admin" | "client";
   status: "active" | "disabled" | string;
   created_at: string;
@@ -29,7 +31,7 @@ export default async function AdminsPage() {
   const admin = createAdminClient();
   const { data: admins } = await admin
     .from("profiles")
-    .select("id, email, full_name, role, status, created_at, last_login_at")
+    .select("id, email, full_name, first_name, last_name, role, status, created_at, last_login_at")
     .eq("role", "admin")
     .order("created_at", { ascending: true });
 
