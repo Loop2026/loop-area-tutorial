@@ -38,10 +38,6 @@ export default function LoginPage({
             <strong>24/7</strong>
             <small>accesso riservato</small>
           </span>
-          <span>
-            <strong>MFA</strong>
-            <small>autenticazione 2FA</small>
-          </span>
         </div>
       </section>
 
