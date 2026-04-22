@@ -21,8 +21,9 @@ export function LoginForm({ nextParam }: Props) {
     setErr(null);
     startTransition(async () => {
       const sb = createClient();
+      const attemptedEmail = email.trim();
       const { error } = await sb.auth.signInWithPassword({
-        email: email.trim(),
+        email: attemptedEmail,
         password
       });
       if (error) {
@@ -31,6 +32,12 @@ export function LoginForm({ nextParam }: Props) {
             ? "Credenziali non valide"
             : error.message
         );
+        // log best-effort del tentativo fallito (non bloccante)
+        void fetch("/api/auth/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "failed", email: attemptedEmail }),
+        }).catch(() => {});
         return;
       }
       // aggiorno last_login_at best-effort (non bloccante)
@@ -39,6 +46,16 @@ export function LoginForm({ nextParam }: Props) {
       } = await sb.auth.getUser();
       if (user) {
         await sb.from("profiles").update({ last_login_at: new Date().toISOString() }).eq("id", user.id);
+      }
+      // log best-effort del login riuscito (non bloccante)
+      try {
+        await fetch("/api/auth/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "login" }),
+        });
+      } catch {
+        // ignoro: il log non deve bloccare l'accesso
       }
       router.push(params.next || "/area");
       router.refresh();

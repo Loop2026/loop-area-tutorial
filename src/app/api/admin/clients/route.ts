@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient, createAdminClient } from "@/lib/supabase/server";
+import { logAudit } from "@/lib/audit";
 
 // POST /api/admin/clients
 // Crea un nuovo utente cliente con password temporanea random.
@@ -50,6 +51,14 @@ export async function POST(req: Request) {
     used: true,
     used_at: new Date().toISOString(),
     resulting_user: created.user!.id
+  });
+
+  await logAudit({
+    eventType: "client.create",
+    targetType: "user",
+    targetId: created.user!.id,
+    targetLabel: email,
+    metadata: { fullName, via: "admin.new-client" }
   });
 
   return NextResponse.json({
