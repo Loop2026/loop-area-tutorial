@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminTopbar } from "@/components/AdminTopbar";
+import { Sidebar } from "@/components/Sidebar";
 import type { ModuleRow, Profile } from "@/lib/types";
 
 export default async function AdminModules() {
@@ -24,14 +24,15 @@ export default async function AdminModules() {
   const rows = (modules ?? []) as ModuleRow[];
 
   return (
-    <div className="min-h-screen bg-[var(--off)]">
-      <AdminTopbar
+    <div className="flex min-h-screen bg-[var(--off)]">
+      <Sidebar
+        role="admin"
         fullName={me.full_name ?? ""}
         email={me.email}
-        active="modules"
       />
 
-      <div className="admin-page">
+      <main className="flex-1 min-w-0 pt-16 md:pt-0">
+        <div className="admin-page">
         <header className="mb-8">
           <div className="admin-eyebrow">
             <span className="d" />
@@ -107,7 +108,8 @@ export default async function AdminModules() {
             Nessun modulo. Devono essere stati seedati nel database.
           </div>
         )}
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

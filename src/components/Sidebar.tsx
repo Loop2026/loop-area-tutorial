@@ -47,6 +47,7 @@ export function Sidebar({ role, fullName, email, counters = [] }: Props) {
         { section: "Panoramica", href: "/admin",           label: "Dashboard",      icon: IconHome     },
         { section: "Clienti",    href: "/admin/clients",    label: "Lista clienti",  icon: IconUsers    },
         {                        href: "/admin/new-client", label: "Nuovo cliente",  icon: IconPlus     },
+        { section: "Contenuti",  href: "/admin/modules",    label: "Moduli",         icon: IconBook     },
         { section: "Sistema",    href: "/admin/admins",     label: "Amministratori", icon: IconShield   },
         {                        href: "/admin/logs",       label: "Log",            icon: IconClipboard},
         {                        href: "/admin/settings",   label: "Impostazioni",   icon: IconCog      }
@@ -177,5 +178,6 @@ function IconCog(p: any)       { return <svg {...p} viewBox="0 0 24 24" fill="no
 function IconLife(p: any)      { return <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><path d="M4.93 4.93l4.24 4.24M14.83 14.83l4.24 4.24M14.83 9.17l4.24-4.24M4.93 19.07l4.24-4.24"/></svg>; }
 function IconShield(p: any)    { return <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2 4 5v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V5l-8-3Z"/><path d="m9 12 2 2 4-4"/></svg>; }
 function IconClipboard(p: any) { return <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4h6v3H9zM8 11h8M8 15h8M8 19h5"/></svg>; }
+function IconBook(p: any)      { return <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v18H6.5A2.5 2.5 0 0 0 4 22V4.5Z"/><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/></svg>; }
 function IconMenu(p: any)      { return <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>; }
 function IconClose(p: any)     { return <svg {...p} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>; }

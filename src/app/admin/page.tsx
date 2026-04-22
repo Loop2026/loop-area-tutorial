@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminTopbar } from "@/components/AdminTopbar";
+import { Sidebar } from "@/components/Sidebar";
 import type { Profile } from "@/lib/types";
 
 interface ClientRow {
@@ -57,14 +57,15 @@ export default async function AdminHome() {
       : 0;
 
   return (
-    <div className="min-h-screen bg-[var(--off)]">
-      <AdminTopbar
+    <div className="flex min-h-screen bg-[var(--off)]">
+      <Sidebar
+        role="admin"
         fullName={profile.full_name ?? ""}
         email={profile.email}
-        active="clients"
       />
 
-      <div className="admin-page">
+      <main className="flex-1 min-w-0 pt-16 md:pt-0">
+        <div className="admin-page">
         <header className="mb-8 flex items-end justify-between flex-wrap gap-4">
           <div>
             <div className="admin-eyebrow">
@@ -200,7 +201,8 @@ export default async function AdminHome() {
             </table>
           </div>
         </section>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }

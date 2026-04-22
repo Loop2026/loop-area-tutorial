@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminTopbar } from "@/components/AdminTopbar";
+import { Sidebar } from "@/components/Sidebar";
 import { ClientActions } from "./ClientActions";
 import { computeModuleStates } from "@/lib/modules-state";
 import type {
@@ -69,14 +69,15 @@ export default async function ClientDetail({
   const status = client.status ?? "active";
 
   return (
-    <div className="min-h-screen bg-[var(--off)]">
-      <AdminTopbar
+    <div className="flex min-h-screen bg-[var(--off)]">
+      <Sidebar
+        role="admin"
         fullName={me.full_name ?? ""}
         email={me.email}
-        active="clients"
       />
 
-      <div className="admin-page">
+      <main className="flex-1 min-w-0 pt-16 md:pt-0">
+        <div className="admin-page">
         <Link
           href="/admin"
           className="text-sm text-[var(--ink-slate)] hover:text-[var(--ink)] mb-6 inline-block"
@@ -268,7 +269,8 @@ export default async function ClientDetail({
             </ul>
           </div>
         </section>
-      </div>
+        </div>
+      </main>
     </div>
   );
 }
