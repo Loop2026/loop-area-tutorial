@@ -19,12 +19,14 @@ export type AuditEventType =
   | "admin.enable"
   | "admin.delete"
   | "admin.role_change"
+  | "admin.reset_password"
   // Client management
   | "client.create"
   | "client.update"
   | "client.disable"
   | "client.enable"
   | "client.delete"
+  | "client.reset_password"
   // Modules
   | "module.create"
   | "module.update"

@@ -9,34 +9,34 @@ interface Props {
   currentUserId: string;
 }
 
-type Mode = "invite" | "create";
-
 export function AdminsClient({ initialAdmins, currentUserId }: Props) {
   const router = useRouter();
   const [admins, setAdmins] = useState<AdminRow[]>(initialAdmins);
-  const [mode, setMode] = useState<Mode>("invite");
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<
     | { kind: "ok"; text: string }
     | { kind: "err"; text: string }
     | null
   >(null);
+  const [newCredentials, setNewCredentials] = useState<{
+    email: string;
+    password: string;
+    label: string;
+  } | null>(null);
 
   async function submitNew(e: React.FormEvent) {
     e.preventDefault();
     setFeedback(null);
+    setNewCredentials(null);
 
     startTransition(async () => {
       const res = await fetch("/api/admin/admins", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode,
           email: email.trim(),
-          password: password.trim(),
           fullName: fullName.trim(),
         }),
       });
@@ -47,22 +47,40 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
         return;
       }
 
-      if (mode === "invite") {
-        setFeedback({
-          kind: "ok",
-          text: `Invito inviato a ${email}. Al primo accesso sarà admin.`,
-        });
-      } else {
-        setFeedback({
-          kind: "ok",
-          text: `Admin creato: ${email}. Comunicagli la password che hai impostato.`,
-        });
-      }
-
+      setNewCredentials({
+        email: json.email,
+        password: json.password,
+        label: "Admin creato",
+      });
       setEmail("");
       setFullName("");
-      setPassword("");
       router.refresh();
+    });
+  }
+
+  async function resetPassword(id: string, targetEmail: string) {
+    if (
+      !confirm(
+        `Generare una nuova password per ${targetEmail}? La precedente smetterà subito di funzionare.`
+      )
+    )
+      return;
+    setFeedback(null);
+    setNewCredentials(null);
+    startTransition(async () => {
+      const res = await fetch(`/api/admin/admins/${id}/reset-password`, {
+        method: "POST",
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setFeedback({ kind: "err", text: json.error ?? "Errore imprevisto" });
+        return;
+      }
+      setNewCredentials({
+        email: targetEmail,
+        password: json.password,
+        label: "Nuova password generata",
+      });
     });
   }
 
@@ -85,6 +103,7 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
     if (!confirm(messages[action])) return;
 
     setFeedback(null);
+    setNewCredentials(null);
     startTransition(async () => {
       const res = await fetch(`/api/admin/admins/${id}`, {
         method: action === "delete" ? "DELETE" : "PATCH",
@@ -102,7 +121,9 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
       } else {
         setAdmins((prev) =>
           prev.map((a) =>
-            a.id === id ? { ...a, status: action === "disable" ? "disabled" : "active" } : a
+            a.id === id
+              ? { ...a, status: action === "disable" ? "disabled" : "active" }
+              : a
           )
         );
       }
@@ -118,122 +139,161 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
     });
   }
 
+  function copy(text: string) {
+    navigator.clipboard.writeText(text);
+    setFeedback({ kind: "ok", text: "Password copiata negli appunti." });
+    setTimeout(() => setFeedback(null), 2000);
+  }
+
+  function buildMailto(toEmail: string, password: string) {
+    const loginUrl =
+      typeof window !== "undefined" ? `${window.location.origin}/login` : "/login";
+    const subject = encodeURIComponent("Credenziali Admin Console LOOP");
+    const body = encodeURIComponent(
+      `Ciao,
+
+ecco le credenziali per accedere come amministratore all'Area Tutorial LOOP:
+
+   • Indirizzo: ${loginUrl}
+   • Tab:       Admin
+   • Email:     ${toEmail}
+   • Password:  ${password}
+
+Ti consigliamo di cambiarla al primo accesso.
+
+A presto,
+Team LOOP
+`
+    );
+    return `mailto:${toEmail}?subject=${subject}&body=${body}`;
+  }
+
   return (
     <>
-      {/* Form nuovo admin */}
-      <section className="card p-6 mb-8">
-        <h2 className="font-bold text-ink mb-4">Nuovo amministratore</h2>
-
-        <div className="inline-flex rounded-lg border border-paper-border p-1 mb-4 bg-paper-soft">
-          <button
-            type="button"
-            onClick={() => setMode("invite")}
-            className={`px-4 py-1.5 text-sm rounded-md transition ${
-              mode === "invite" ? "bg-white shadow-sm text-ink" : "text-ink-muted"
-            }`}
-          >
-            Invita via email
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode("create")}
-            className={`px-4 py-1.5 text-sm rounded-md transition ${
-              mode === "create" ? "bg-white shadow-sm text-ink" : "text-ink-muted"
-            }`}
-          >
-            Crea con password
-          </button>
+      {/* Form nuovo admin — niente modalità, niente email Supabase */}
+      <section className="a-panel mb-8">
+        <div className="a-panel-h">
+          <h2>Nuovo amministratore</h2>
+          <span className="meta">password generata in automatico</span>
         </div>
+        <div className="a-panel-b">
+          <p className="text-sm text-[var(--ink-slate)] mb-4">
+            Inserisci email e nome dell&apos;admin. L&apos;account viene creato
+            subito, già confermato: riceverai la password temporanea qui sotto
+            da comunicare manualmente.
+            <strong> Nessuna email viene inviata da Supabase.</strong>
+          </p>
 
-        <form onSubmit={submitNew} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="text-sm">
-            <span className="block text-ink-muted mb-1">Email *</span>
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="nome@azienda.com"
-              className="input w-full"
-            />
-          </label>
-          <label className="text-sm">
-            <span className="block text-ink-muted mb-1">Nome completo</span>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Es. Luca Rossi"
-              className="input w-full"
-            />
-          </label>
-          {mode === "create" && (
-            <label className="text-sm md:col-span-2">
-              <span className="block text-ink-muted mb-1">
-                Password temporanea * <span className="text-xs">(min 10 caratteri)</span>
+          <form
+            onSubmit={submitNew}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            <label className="text-sm">
+              <span className="block text-[var(--ink-slate)] mb-1">
+                Email *
+              </span>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="nome@azienda.com"
+                className="a-field w-full"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="block text-[var(--ink-slate)] mb-1">
+                Nome completo
               </span>
               <input
                 type="text"
-                required
-                minLength={10}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Almeno 10 caratteri"
-                className="input w-full font-mono"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Es. Luca Rossi"
+                className="a-field w-full"
               />
             </label>
-          )}
-          <div className="md:col-span-2 flex items-center gap-3">
-            <button type="submit" className="btn-primary" disabled={busy}>
-              {busy
-                ? "Attendi…"
-                : mode === "invite"
-                ? "Invia invito"
-                : "Crea admin"}
-            </button>
-            <p className="text-xs text-ink-muted">
-              {mode === "invite"
-                ? "L'utente riceverà una mail da Supabase con un link per impostare la password."
-                : "L'account viene creato attivo. Dovrai comunicare tu la password all'admin."}
-            </p>
-          </div>
-        </form>
-
-        {feedback && (
-          <div
-            className={`mt-4 text-sm p-3 rounded-lg ${
-              feedback.kind === "ok"
-                ? "bg-green-50 text-green-800 border border-green-200"
-                : "bg-red-50 text-red-800 border border-red-200"
-            }`}
-          >
-            {feedback.text}
-          </div>
-        )}
+            <div className="md:col-span-2">
+              <button type="submit" className="a-btn a-btn-primary" disabled={busy}>
+                {busy ? "Creo…" : "Crea admin"}
+              </button>
+            </div>
+          </form>
+        </div>
       </section>
 
+      {/* Credenziali mostrate UNA volta (post-create o post-reset) */}
+      {newCredentials && (
+        <div className="a-alert a-alert-warn mb-6">
+          <span>🔑</span>
+          <div className="flex-1">
+            <div className="font-bold mb-2">
+              {newCredentials.label} — credenziali (mostrate UNA volta)
+            </div>
+            <div className="text-sm mb-3">
+              <strong>Email:</strong> {newCredentials.email}
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <code className="font-mono text-base bg-white px-3 py-2 rounded-lg border border-amber-300">
+                {newCredentials.password}
+              </code>
+              <button
+                type="button"
+                className="a-btn a-btn-ghost text-xs"
+                onClick={() => copy(newCredentials.password)}
+              >
+                Copia
+              </button>
+              <a
+                href={buildMailto(newCredentials.email, newCredentials.password)}
+                target="_blank"
+                rel="noopener"
+                className="a-btn a-btn-primary text-xs"
+              >
+                ✉ Invia via email
+              </a>
+            </div>
+            <div className="text-xs mt-2 text-amber-800">
+              Uscendo dalla pagina la password non sarà più recuperabile.
+              Salvala o inviala subito.
+            </div>
+          </div>
+        </div>
+      )}
+
+      {feedback && !newCredentials && (
+        <div
+          className={`a-alert ${
+            feedback.kind === "ok" ? "a-alert-info" : "a-alert-err"
+          } mb-6`}
+        >
+          <span>{feedback.kind === "ok" ? "ℹ" : "⚠"}</span>
+          <div>{feedback.text}</div>
+        </div>
+      )}
+
       {/* Lista admin */}
-      <section className="card overflow-hidden">
-        <header className="px-6 py-4 border-b border-paper-border flex items-center justify-between">
-          <h2 className="font-bold text-ink">Amministratori esistenti</h2>
-          <span className="text-sm text-ink-muted">{admins.length}</span>
-        </header>
+      <section className="a-panel overflow-hidden">
+        <div className="a-panel-h">
+          <h2>Amministratori esistenti</h2>
+          <span className="meta">{admins.length}</span>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-paper-soft text-left text-xs uppercase tracking-wider text-ink-muted">
+          <table className="a-table">
+            <thead>
               <tr>
-                <th className="px-6 py-3">Nome</th>
-                <th className="px-6 py-3">Email</th>
-                <th className="px-6 py-3">Stato</th>
-                <th className="px-6 py-3">Creato</th>
-                <th className="px-6 py-3">Ultimo accesso</th>
-                <th className="px-6 py-3 text-right">Azioni</th>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Stato</th>
+                <th>Creato</th>
+                <th>Ultimo accesso</th>
+                <th className="text-right">Azioni</th>
               </tr>
             </thead>
             <tbody>
               {admins.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="px-6 py-10 text-center text-ink-muted">
+                  <td colSpan={6} className="text-center text-[var(--ink-slate)] py-10">
                     Nessun amministratore. Aggiungine uno dal form sopra.
                   </td>
                 </tr>
@@ -242,43 +302,52 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
                 const isMe = a.id === currentUserId;
                 const disabled = a.status === "disabled";
                 return (
-                  <tr
-                    key={a.id}
-                    className={`border-t border-paper-border ${
-                      disabled ? "bg-red-50/40" : "hover:bg-paper-soft"
-                    }`}
-                  >
-                    <td className="px-6 py-3 font-medium text-ink">
-                      {a.full_name ?? <span className="text-ink-muted italic">—</span>}
+                  <tr key={a.id}>
+                    <td className="font-semibold text-[var(--navy)]">
+                      {a.full_name ?? (
+                        <span className="text-[var(--ink-slate)] italic font-normal">
+                          —
+                        </span>
+                      )}
                       {isMe && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-blue-m/10 text-blue-m uppercase tracking-wider">
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-[var(--blue-m)]/10 text-[var(--blue-m)] uppercase tracking-wider">
                           tu
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-3 text-ink-muted">{a.email}</td>
-                    <td className="px-6 py-3">
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          disabled
-                            ? "bg-red-100 text-red-700"
-                            : "bg-green-100 text-green-700"
-                        }`}
-                      >
-                        {disabled ? "Disabilitato" : "Attivo"}
-                      </span>
+                    <td className="text-[var(--ink-slate)]">{a.email}</td>
+                    <td>
+                      {disabled ? (
+                        <span className="pill pill-off">
+                          <span className="d" />
+                          Disabilitato
+                        </span>
+                      ) : (
+                        <span className="pill pill-ok">
+                          <span className="d" />
+                          Attivo
+                        </span>
+                      )}
                     </td>
-                    <td className="px-6 py-3 text-sm text-ink-muted">
+                    <td className="text-sm text-[var(--ink-slate)]">
                       {new Date(a.created_at).toLocaleDateString("it-IT")}
                     </td>
-                    <td className="px-6 py-3 text-sm text-ink-muted">
+                    <td className="text-sm text-[var(--ink-slate)]">
                       {a.last_login_at
                         ? new Date(a.last_login_at).toLocaleDateString("it-IT")
                         : "—"}
                     </td>
-                    <td className="px-6 py-3 text-right">
+                    <td className="text-right">
                       {!isMe ? (
-                        <div className="inline-flex gap-2">
+                        <div className="inline-flex gap-2 flex-wrap justify-end">
+                          <button
+                            type="button"
+                            onClick={() => resetPassword(a.id, a.email)}
+                            disabled={busy}
+                            className="text-xs px-2 py-1 rounded-md border border-[var(--blue-m)]/30 text-[var(--blue-m)] hover:bg-[var(--blue-m)]/5"
+                          >
+                            🔑 Password
+                          </button>
                           {disabled ? (
                             <button
                               type="button"
@@ -291,7 +360,9 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
                           ) : (
                             <button
                               type="button"
-                              onClick={() => runAction(a.id, "disable", a.email)}
+                              onClick={() =>
+                                runAction(a.id, "disable", a.email)
+                              }
                               disabled={busy}
                               className="text-xs px-2 py-1 rounded-md border border-orange-300 text-orange-700 hover:bg-orange-50"
                             >
@@ -302,7 +373,7 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
                             type="button"
                             onClick={() => runAction(a.id, "demote", a.email)}
                             disabled={busy}
-                            className="text-xs px-2 py-1 rounded-md border border-gray-300 text-ink hover:bg-gray-50"
+                            className="text-xs px-2 py-1 rounded-md border border-gray-300 text-[var(--ink)] hover:bg-gray-50"
                           >
                             Declassa
                           </button>
@@ -316,7 +387,9 @@ export function AdminsClient({ initialAdmins, currentUserId }: Props) {
                           </button>
                         </div>
                       ) : (
-                        <span className="text-xs text-ink-muted italic">—</span>
+                        <span className="text-xs text-[var(--ink-slate)] italic">
+                          —
+                        </span>
                       )}
                     </td>
                   </tr>

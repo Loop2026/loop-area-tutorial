@@ -277,6 +277,38 @@ html, body {
     animation: pulse-dot 2.2s ease-in-out infinite;
   }
   .mfa-note small { font-size:13px; color: var(--mid); line-height:1.5; }
+
+  /* Segmented control Cliente / Admin nella form di login */
+  .role-switch {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    background: var(--off);
+    border: 1px solid #DBE4FF;
+    border-radius: 12px;
+    margin-bottom: 6px;
+  }
+  .role-switch-opt {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    padding: 10px 14px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--mid);
+    letter-spacing: .01em;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease, box-shadow .15s ease;
+  }
+  .role-switch-opt:hover { color: var(--ink); }
+  .role-switch-opt.is-active {
+    background: #fff;
+    color: var(--ink);
+    box-shadow: 0 1px 2px rgba(10,22,57,.08), 0 0 0 1px rgba(37,99,235,.25);
+  }
+  .role-switch-opt[aria-selected="true"] { color: var(--blue-m); }
   .mfa-note small b { color: var(--ink); font-weight:700; }
 
   /* ------- Hero area (grande, navy, con grid pattern) ------- */

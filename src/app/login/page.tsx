@@ -27,8 +27,8 @@ export default function LoginPage({
           </h1>
           <p>
             Sei videocorsi, una dashboard operativa e il supporto del nostro team.
-            Accedi con le credenziali ricevute via email dopo l&apos;attivazione del
-            tuo contratto.
+            Accedi con le credenziali fornite dal team LOOP dopo l&apos;attivazione
+            del tuo contratto.
           </p>
         </div>
 
@@ -60,8 +60,8 @@ export default function LoginPage({
             <span className="eyebrow">Accedi</span>
             <h2>Benvenuto nell&apos;Area Tutorial</h2>
             <p>
-              Inserisci le credenziali ricevute via email dopo l&apos;attivazione del
-              tuo contratto. Se hai problemi, il team risponde entro 24 ore lavorative.
+              Seleziona il tipo di accesso, poi inserisci le credenziali fornite
+              dal team LOOP. Se hai problemi, rispondiamo entro 24 ore lavorative.
             </p>
           </div>
 

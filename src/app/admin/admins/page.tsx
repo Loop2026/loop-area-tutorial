@@ -26,7 +26,6 @@ export default async function AdminsPage() {
     .single<Profile>();
   if (profile?.role !== "admin") redirect("/area");
 
-  // Service role per vedere tutti gli admin
   const admin = createAdminClient();
   const { data: admins } = await admin
     .from("profiles")
@@ -35,28 +34,36 @@ export default async function AdminsPage() {
     .order("created_at", { ascending: true });
 
   return (
-    <div className="flex min-h-screen bg-paper-soft">
+    <div className="flex min-h-screen bg-[var(--off)]">
       <Sidebar
         role="admin"
         fullName={profile.full_name ?? ""}
         email={profile.email}
       />
-      <main className="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full pt-16 md:pt-10">
-        <header className="mb-8">
-          <div className="text-xs tracking-widest text-blue-m uppercase">
-            Admin Console
-          </div>
-          <h1 className="text-3xl font-bold text-ink">Amministratori</h1>
-          <p className="text-ink-muted mt-1">
-            Gestisci gli account con accesso all&rsquo;Admin Console. Puoi invitare un nuovo
-            admin via email, crearlo direttamente, o disabilitare e rimuovere quelli esistenti.
-          </p>
-        </header>
 
-        <AdminsClient
-          initialAdmins={(admins ?? []) as AdminRow[]}
-          currentUserId={user.id}
-        />
+      <main className="flex-1 min-w-0 pt-16 md:pt-0">
+        <div className="admin-page">
+          <header className="mb-8">
+            <div className="admin-eyebrow">
+              <span className="d" />
+              ADMIN · AMMINISTRATORI
+            </div>
+            <h1 className="admin-h1">
+              Gestione <em>amministratori</em>.
+            </h1>
+            <p className="text-[15px] text-[var(--ink-slate)] mt-2 max-w-2xl">
+              Crea nuovi account admin con password generata automaticamente,
+              rigenera credenziali, sospendi o elimina. Nessuna email viene
+              mai inviata da Supabase — le credenziali le comunichi tu
+              manualmente.
+            </p>
+          </header>
+
+          <AdminsClient
+            initialAdmins={(admins ?? []) as AdminRow[]}
+            currentUserId={user.id}
+          />
+        </div>
       </main>
     </div>
   );

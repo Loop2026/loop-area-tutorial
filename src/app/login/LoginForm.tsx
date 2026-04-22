@@ -8,9 +8,12 @@ interface Props {
   nextParam: Promise<{ next?: string; error?: string }>;
 }
 
+type Role = "client" | "admin";
+
 export function LoginForm({ nextParam }: Props) {
   const params = use(nextParam);
   const router = useRouter();
+  const [role, setRole] = useState<Role>("client");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState<string | null>(params.error ?? null);
@@ -24,7 +27,7 @@ export function LoginForm({ nextParam }: Props) {
       const attemptedEmail = email.trim();
       const { error } = await sb.auth.signInWithPassword({
         email: attemptedEmail,
-        password
+        password,
       });
       if (error) {
         setErr(
@@ -32,7 +35,6 @@ export function LoginForm({ nextParam }: Props) {
             ? "Credenziali non valide"
             : error.message
         );
-        // log best-effort del tentativo fallito (non bloccante)
         void fetch("/api/auth/event", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -40,14 +42,42 @@ export function LoginForm({ nextParam }: Props) {
         }).catch(() => {});
         return;
       }
-      // aggiorno last_login_at best-effort (non bloccante)
+
+      // Verifica che il role selezionato combaci con quello effettivo
       const {
-        data: { user }
+        data: { user },
       } = await sb.auth.getUser();
-      if (user) {
-        await sb.from("profiles").update({ last_login_at: new Date().toISOString() }).eq("id", user.id);
+      if (!user) {
+        setErr("Sessione non valida. Riprova.");
+        return;
       }
-      // log best-effort del login riuscito (non bloccante)
+      const { data: profile } = await sb
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      const actualRole = (profile as { role?: Role } | null)?.role ?? "client";
+
+      if (role === "admin" && actualRole !== "admin") {
+        await sb.auth.signOut();
+        setErr(
+          "Questo account non ha permessi amministratore. Usa il tab Cliente."
+        );
+        return;
+      }
+      if (role === "client" && actualRole === "admin") {
+        await sb.auth.signOut();
+        setErr(
+          "Questo è un account amministratore. Usa il tab Admin per accedere."
+        );
+        return;
+      }
+
+      await sb
+        .from("profiles")
+        .update({ last_login_at: new Date().toISOString() })
+        .eq("id", user.id);
+
       try {
         await fetch("/api/auth/event", {
           method: "POST",
@@ -55,17 +85,55 @@ export function LoginForm({ nextParam }: Props) {
           body: JSON.stringify({ type: "login" }),
         });
       } catch {
-        // ignoro: il log non deve bloccare l'accesso
+        // log best-effort
       }
-      router.push(params.next || "/area");
+
+      const dest =
+        params.next || (actualRole === "admin" ? "/admin" : "/area");
+      router.push(dest);
       router.refresh();
     });
   }
 
   return (
     <form onSubmit={submit} className="space-y-4" noValidate>
+      {/* Segmented control Cliente / Admin */}
+      <div
+        role="tablist"
+        aria-label="Tipo di accesso"
+        className="role-switch"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={role === "client"}
+          onClick={() => {
+            setRole("client");
+            setErr(null);
+          }}
+          className={`role-switch-opt ${role === "client" ? "is-active" : ""}`}
+        >
+          Cliente
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={role === "admin"}
+          onClick={() => {
+            setRole("admin");
+            setErr(null);
+          }}
+          className={`role-switch-opt ${role === "admin" ? "is-active" : ""}`}
+        >
+          Admin
+        </button>
+      </div>
+
       <div>
-        <label className="block text-sm font-medium text-ink mb-2" htmlFor="email">
+        <label
+          className="block text-sm font-medium text-ink mb-2"
+          htmlFor="email"
+        >
           Email
         </label>
         <input
@@ -74,7 +142,9 @@ export function LoginForm({ nextParam }: Props) {
           required
           autoComplete="email"
           className="field"
-          placeholder="tua@email.com"
+          placeholder={
+            role === "admin" ? "admin@loop-online.com" : "tua@email.com"
+          }
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -108,7 +178,11 @@ export function LoginForm({ nextParam }: Props) {
       )}
 
       <button type="submit" className="btn-primary w-full" disabled={pending}>
-        {pending ? "Accesso in corso…" : "Accedi"}
+        {pending
+          ? "Accesso in corso…"
+          : role === "admin"
+          ? "Entra come Admin"
+          : "Entra come Cliente"}
       </button>
     </form>
   );

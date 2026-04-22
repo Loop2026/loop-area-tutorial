@@ -50,30 +50,41 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Guard area admin: solo ruolo admin
-  if (user && pathname.startsWith("/admin")) {
+  // Ruolo-based routing: separazione netta admin ↔ client.
+  // Una sola query profili per richiesta sulle path rilevanti.
+  if (
+    user &&
+    (pathname.startsWith("/admin") ||
+      pathname.startsWith("/area") ||
+      pathname === "/login")
+  ) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
-    if (profile?.role !== "admin") {
+    const role = (profile as { role?: string } | null)?.role;
+
+    // Utente già loggato atterrato su /login → manda alla sua area
+    if (pathname === "/login") {
+      const url = request.nextUrl.clone();
+      url.pathname = role === "admin" ? "/admin" : "/area";
+      return NextResponse.redirect(url);
+    }
+
+    // Client che tenta /admin/* → /area
+    if (pathname.startsWith("/admin") && role !== "admin") {
       const url = request.nextUrl.clone();
       url.pathname = "/area";
       return NextResponse.redirect(url);
     }
-  }
 
-  // Utente loggato che va su /login → redirect in base al ruolo
-  if (user && pathname === "/login") {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    const url = request.nextUrl.clone();
-    url.pathname = profile?.role === "admin" ? "/admin" : "/area";
-    return NextResponse.redirect(url);
+    // Admin che tenta /area/* → /admin (separazione netta)
+    if (pathname.startsWith("/area") && role === "admin") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/admin";
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;
