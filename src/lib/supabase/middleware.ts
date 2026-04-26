@@ -34,10 +34,13 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Route pubbliche (login + assets + api/auth)
+  // Route pubbliche (login + assets + api/auth + webhook)
+  // I webhook hanno autenticazione propria (x-webhook-secret),
+  // non vanno passati dal flusso login Supabase.
   const isPublic =
     pathname === "/login" ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/webhook") ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.startsWith("/resources") ||
