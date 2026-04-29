@@ -177,7 +177,11 @@ export function LoginForm({ nextParam }: Props) {
         </div>
       )}
 
-      <button type="submit" className="btn-primary w-full" disabled={pending}>
+      <button
+        type="submit"
+        disabled={pending}
+        className="btn-primary w-full py-4 text-base font-bold tracking-wide rounded-xl shadow-md hover:shadow-lg active:translate-y-px transition disabled:opacity-60 disabled:cursor-not-allowed"
+      >
         {pending
           ? "Accesso in corso…"
           : role === "admin"
