@@ -55,7 +55,16 @@ export default function LoginPage({
             <p>
               Seleziona il tipo di accesso, poi inserisci le credenziali fornite
               dal team LOOP. Se hai problemi, contatta l&apos;assistenza sul
-              canale Telegram.
+              canale Telegram{" "}
+              <a
+                href="https://t.me/Customer_Care_Loop"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-m font-semibold hover:underline"
+              >
+                @Customer_Care_Loop
+              </a>
+              .
             </p>
           </div>
 

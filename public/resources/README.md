@@ -16,11 +16,15 @@ il bottone ma cliccandolo non scarica nulla.
 | `/resources/m2-kyc-template.pdf`| PDF   | m2 ONBOARDING BROKER         | ❌ da produrre |
 | `/resources/m3-risk-calc.xlsx`  | XLSX  | m3 ONBOARDING PROP CHALLENGE | ❌ da produrre |
 | `/resources/m3-cheatsheet.pdf`  | PDF   | m3 ONBOARDING PROP CHALLENGE | ❌ da produrre |
-| `/resources/m4-checklist.pdf`   | PDF   | m4 IL SOFTWARE LOOP 1.0      | ❌ da produrre |
-| `/resources/m4-journal.xlsx`    | XLSX  | m4 IL SOFTWARE LOOP 1.0      | ❌ da produrre |
-| `/resources/m5-propfirm.pdf`    | PDF   | m5 LA ARBITRAGE CLIENT DASHBOARD | ❌ da produrre |
-| `/resources/m5-scaling.xlsx`    | XLSX  | m5 LA ARBITRAGE CLIENT DASHBOARD | ❌ da produrre |
-| `/resources/m6-runbook.pdf`     | PDF   | m6 SET UP OPERATIVO          | ❌ da produrre |
+| `/resources/m4-tech-doc.pdf`         | PDF   | m4 IL SOFTWARE LOOP 1.0          | ❌ da produrre |
+| `/resources/m4-glossary.pdf`         | PDF   | m4 IL SOFTWARE LOOP 1.0          | ❌ da produrre |
+| `/resources/m5-dashboard-guide.pdf`  | PDF   | m5 LA ARBITRAGE CLIENT DASHBOARD | ❌ da produrre |
+| `/resources/m5-dashboard-features.pdf` | PDF | m5 LA ARBITRAGE CLIENT DASHBOARD | ❌ da produrre |
+| `/resources/m6-runbook.pdf`          | PDF   | m6 SET UP OPERATIVO              | ❌ da produrre |
+
+Inoltre il modulo m6 referenzia il canale Telegram esterno
+[`@Customer_Care_Loop`](https://t.me/Customer_Care_Loop) — non è un file
+locale, è un link diretto al gruppo di assistenza.
 
 ## Come aggiungere/aggiornare un file
 
