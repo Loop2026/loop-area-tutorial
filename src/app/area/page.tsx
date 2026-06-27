@@ -215,25 +215,17 @@ export default async function AreaPage() {
               Servizio gratuito di assistenza tecnica LOOP
             </h3>
             <p className="text-[14px] text-[var(--mid)] leading-relaxed">
-              Risposta rapida sul canale Telegram, oppure scrivici via email.
+              Scrivici sul canale Telegram dedicato per ricevere assistenza rapida.
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <a
-              href="https://t.me/Customer_Care_Loop"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-primary"
-            >
-              ✈ Telegram @Customer_Care_Loop
-            </a>
-            <a
-              href="mailto:support@loop-online.com?subject=Supporto%20Area%20Tutorial%20LOOP"
-              className="btn btn-ghost"
-            >
-              ✉ Email supporto
-            </a>
-          </div>
+          <a
+            href="https://t.me/Customer_Care_Loop"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+          >
+            ✈ Telegram @Customer_Care_Loop
+          </a>
         </section>
       </div>
     </div>
