@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { computeModuleStates } from "@/lib/modules-state";
 import { BunnyPlayer } from "@/components/BunnyPlayer";
 import { PlayerTabs } from "@/components/PlayerTabs";
+import { MarkCompleteButton } from "@/components/MarkCompleteButton";
 import { Sidebar } from "@/components/Sidebar";
 import type { Chapter, ResourceLink, ModuleRow, ProgressRow, Profile } from "@/lib/types";
 
@@ -75,6 +76,14 @@ export default async function PlayerPage({
               Riceverai una notifica appena il video sarà online.
             </p>
           </div>
+        )}
+
+        {videoReady && (
+          <MarkCompleteButton
+            moduleId={current.id}
+            initialDone={!!current.progress?.done}
+            nextModuleTitle={next?.title ?? null}
+          />
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
