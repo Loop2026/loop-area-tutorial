@@ -68,21 +68,30 @@ export function BunnyPlayer({
     let player: PlayerJSInstance | null = null;
 
     async function persist(pct: number, done = false) {
+      // Una volta marcato done, ignora tutti i persist(false) successivi:
+      // l'upsert sovrascriverebbe done=true tornandolo a false e il
+      // modulo successivo resterebbe bloccato. Il done resta "sticky".
+      if (!done && doneRef.current) return;
+
       lastPctRef.current = pct;
       lastSentAtRef.current = Date.now();
       const watched = Math.min(100, Math.max(0, Math.round(pct)));
 
-      const { error: e1 } = await sb.from("progress").upsert(
-        {
-          user_id: userId,
-          module_id: moduleId,
-          watched_pct: watched,
-          done,
-          completed_at: done ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,module_id" }
-      );
+      // Costruisci payload preservando done=true se già impostato
+      const payload: Record<string, unknown> = {
+        user_id: userId,
+        module_id: moduleId,
+        watched_pct: watched,
+        done: done || doneRef.current,
+        updated_at: new Date().toISOString(),
+      };
+      if (done || doneRef.current) {
+        payload.completed_at = new Date().toISOString();
+      }
+
+      const { error: e1 } = await sb.from("progress").upsert(payload, {
+        onConflict: "user_id,module_id",
+      });
       if (e1) console.warn(LOG, "progress upsert error:", e1.message);
 
       const { error: e2 } = await sb.from("video_views").insert({
