@@ -4,48 +4,37 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+// Importa la libreria player.js da npm (più affidabile del CDN esterno).
+// player.js non ha @types ufficiali — dichiariamo l'interfaccia che usiamo.
+// @ts-expect-error — player.js non ha types
+import playerjs from "player.js";
+
 interface Props {
-  videoId: string;           // GUID Bunny Stream
-  libraryId: string;         // ENV NEXT_PUBLIC_BUNNY_LIBRARY_ID
-  moduleId: string;          // 'm1'..'m6'
+  videoId: string;
+  libraryId: string;
+  moduleId: string;
   userId: string;
   initialPct?: number;
   onDone?: () => void;
 }
 
-// Soglia di completamento automatico: se il cliente raggiunge questa
-// percentuale di visione consideriamo il modulo "done" anche se non
-// arriva l'evento "ended" (alcuni saltano gli ultimi secondi di
-// silenzio/credits e cambiano pagina).
-const AUTO_DONE_THRESHOLD = 90;
-
-// Heartbeat: ogni N millisecondi salviamo il progresso sul DB
-const HEARTBEAT_MS = 10_000;
-
-// Tipi minimi per player.js (caricato via CDN, niente @types da npm)
+// Tipi minimi di player.js sufficienti per i nostri usi
 type PlayerJSInstance = {
   on: (event: string, cb: (data?: { seconds?: number; duration?: number }) => void) => void;
-  off?: (event: string) => void;
 };
-declare global {
-  interface Window {
-    playerjs?: { Player: new (iframe: HTMLIFrameElement) => PlayerJSInstance };
-  }
-}
 
-const PLAYERJS_SRC = "https://iframe.mediadelivery.net/player.js";
+const AUTO_DONE_THRESHOLD = 90; // % → marca done anche senza evento "ended"
+const HEARTBEAT_MS = 10_000;
+const LOG_PREFIX = "[BunnyPlayer]";
 
 /**
- * Wrapper Bunny.net Stream con tracking via player.js (la libreria
- * standard ospitata da Bunny stesso). Si registrano gli eventi reali
- * "timeupdate" e "ended" che il player iframe espone — l'approccio
- * precedente basato su postMessage non funzionava perché Bunny non
- * emette nativamente quegli eventi senza player.js.
+ * Wrapper Bunny.net Stream con tracking via player.js (npm).
+ * Il player Bunny iframe supporta nativamente player.js — basta inizializzare
+ * `new playerjs.Player(iframe)` e ascoltare gli eventi.
  *
- * Comportamento:
- * - timeupdate → ogni 10s salva watched_pct in progress + heartbeat in video_views
- * - ended → done=true + completed_at
- * - watched_pct >= 90% → done=true anche se ended non arriva (fallback robusto)
+ * Log diagnostici lasciati a video per debug: aprendo la console del browser
+ * si vedono i passaggi di init e gli eventi. Una volta verificato che tutto
+ * funziona, si possono rimuovere.
  */
 export function BunnyPlayer({
   videoId,
@@ -63,14 +52,14 @@ export function BunnyPlayer({
 
   useEffect(() => {
     const sb = createClient();
-    let player: PlayerJSInstance | null = null;
     let cancelled = false;
+    let player: PlayerJSInstance | null = null;
 
     async function persist(pct: number, done = false) {
       lastPctRef.current = pct;
       lastSentAtRef.current = Date.now();
       try {
-        await sb.from("progress").upsert(
+        const { error: e1 } = await sb.from("progress").upsert(
           {
             user_id: userId,
             module_id: moduleId,
@@ -81,122 +70,100 @@ export function BunnyPlayer({
           },
           { onConflict: "user_id,module_id" }
         );
-        await sb.from("video_views").insert({
+        if (e1) console.warn(LOG_PREFIX, "progress upsert error", e1.message);
+
+        const { error: e2 } = await sb.from("video_views").insert({
           user_id: userId,
           module_id: moduleId,
           event_type: done ? "complete" : "heartbeat",
           watched_pct: Math.round(pct),
         });
+        if (e2) console.warn(LOG_PREFIX, "video_views insert error", e2.message);
+
+        if (!e1 && !e2) {
+          console.log(LOG_PREFIX, "persist OK", { pct: Math.round(pct), done });
+        }
       } catch (err) {
-        // Non blocchiamo il player se il save fallisce — solo log console.
-        console.warn("[BunnyPlayer] persist failed", err);
+        console.warn(LOG_PREFIX, "persist exception", err);
       }
     }
 
     function markDoneOnce(pct: number) {
       if (doneRef.current) return;
       doneRef.current = true;
+      console.log(LOG_PREFIX, "DONE reached at", Math.round(pct), "%");
       persist(pct, true).then(() => {
-        // Re-render server component → la card MarkCompleteButton diventa
-        // verde "Modulo completato" e la sidebar/moduli successivi si
-        // sbloccano senza ricaricare la pagina.
         router.refresh();
         onDone?.();
       });
     }
 
-    function onPlayerReady() {
-      if (!player) return;
+    function init() {
+      if (cancelled || !iframeRef.current) return;
+      try {
+        // Costruisce il player usando l'iframe element
+        // (player.js accetta sia un elemento DOM sia un id stringa)
+        const p = new (playerjs as { Player: new (el: HTMLIFrameElement) => PlayerJSInstance }).Player(iframeRef.current);
+        player = p;
+        console.log(LOG_PREFIX, "player.js inizializzato — aspetto ready");
 
-      player.on("timeupdate", (data) => {
-        if (cancelled || !data || data.duration == null || data.seconds == null) return;
-        const pct = (data.seconds / data.duration) * 100;
-        lastPctRef.current = pct;
+        p.on("ready", () => {
+          console.log(LOG_PREFIX, "✓ player ready — registro listener");
 
-        // Save periodico
-        const elapsed = Date.now() - lastSentAtRef.current;
-        if (elapsed > HEARTBEAT_MS || pct - lastPctRef.current > 5) {
-          persist(pct, false);
-        }
+          p.on("timeupdate", (data) => {
+            if (cancelled || !data || data.duration == null || data.seconds == null) return;
+            const pct = (data.seconds / data.duration) * 100;
+            const prevPct = lastPctRef.current;
+            lastPctRef.current = pct;
 
-        // Auto-done se supera la soglia
-        if (pct >= AUTO_DONE_THRESHOLD) {
-          markDoneOnce(pct);
-        }
-      });
+            const elapsed = Date.now() - lastSentAtRef.current;
+            if (elapsed > HEARTBEAT_MS || pct - prevPct > 5) {
+              persist(pct, false);
+            }
+            if (pct >= AUTO_DONE_THRESHOLD) {
+              markDoneOnce(pct);
+            }
+          });
 
-      player.on("ended", () => {
-        if (cancelled) return;
-        markDoneOnce(100);
-      });
+          p.on("ended", () => {
+            if (cancelled) return;
+            console.log(LOG_PREFIX, "evento 'ended' ricevuto");
+            markDoneOnce(100);
+          });
 
-      player.on("play", () => {
-        if (cancelled) return;
-        sb.from("video_views")
-          .insert({
-            user_id: userId,
-            module_id: moduleId,
-            event_type: "play",
-            watched_pct: Math.round(lastPctRef.current),
-          })
-          .then(() => {});
-      });
+          p.on("play", () => {
+            if (cancelled) return;
+            console.log(LOG_PREFIX, "play");
+            sb.from("video_views").insert({
+              user_id: userId,
+              module_id: moduleId,
+              event_type: "play",
+              watched_pct: Math.round(lastPctRef.current),
+            }).then(() => {});
+          });
 
-      player.on("pause", () => {
-        if (cancelled) return;
-        sb.from("video_views")
-          .insert({
-            user_id: userId,
-            module_id: moduleId,
-            event_type: "pause",
-            watched_pct: Math.round(lastPctRef.current),
-          })
-          .then(() => {});
-      });
-    }
-
-    function initPlayer() {
-      if (!iframeRef.current || !window.playerjs || cancelled) return;
-      player = new window.playerjs.Player(iframeRef.current);
-      player.on("ready", onPlayerReady);
-    }
-
-    function loadPlayerJsIfNeeded(cb: () => void) {
-      if (window.playerjs) {
-        cb();
-        return;
+          p.on("pause", () => {
+            if (cancelled) return;
+            console.log(LOG_PREFIX, "pause");
+            sb.from("video_views").insert({
+              user_id: userId,
+              module_id: moduleId,
+              event_type: "pause",
+              watched_pct: Math.round(lastPctRef.current),
+            }).then(() => {});
+          });
+        });
+      } catch (err) {
+        console.error(LOG_PREFIX, "init exception", err);
       }
-      // Riusa script esistente se già caricato
-      const existing = document.querySelector(
-        `script[src="${PLAYERJS_SRC}"]`
-      ) as HTMLScriptElement | null;
-      if (existing) {
-        if ((existing as HTMLScriptElement & { _loaded?: boolean })._loaded) {
-          cb();
-        } else {
-          existing.addEventListener("load", cb, { once: true });
-        }
-        return;
-      }
-      const script = document.createElement("script");
-      script.src = PLAYERJS_SRC;
-      script.async = true;
-      script.addEventListener("load", () => {
-        (script as HTMLScriptElement & { _loaded?: boolean })._loaded = true;
-        cb();
-      });
-      script.addEventListener("error", () => {
-        console.warn("[BunnyPlayer] failed to load player.js — tracking disabled");
-      });
-      document.body.appendChild(script);
     }
 
-    loadPlayerJsIfNeeded(initPlayer);
+    // L'iframe deve essere già montato — siamo dentro useEffect, lo è.
+    // Dialoga in postMessage, quindi può partire subito.
+    init();
 
     return () => {
       cancelled = true;
-      // player.js non espone destroy esplicito sull'oggetto Player;
-      // il garbage collector pulirà i listener postMessage all'unmount.
     };
   }, [moduleId, userId, onDone, router]);
 
