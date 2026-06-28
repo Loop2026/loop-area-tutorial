@@ -4,9 +4,8 @@ import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// Importa la libreria player.js da npm (più affidabile del CDN esterno).
-// player.js non ha @types ufficiali — dichiariamo l'interfaccia che usiamo.
-// @ts-expect-error — player.js non ha types
+// player.js dal pacchetto npm — niente CDN esterni
+// @ts-expect-error — player.js non ha @types pubblicati
 import playerjs from "player.js";
 
 interface Props {
@@ -18,23 +17,30 @@ interface Props {
   onDone?: () => void;
 }
 
-// Tipi minimi di player.js sufficienti per i nostri usi
+// Tipi minimi di player.js
+type PlayerJSEventData = { seconds?: number; duration?: number } | undefined;
 type PlayerJSInstance = {
-  on: (event: string, cb: (data?: { seconds?: number; duration?: number }) => void) => void;
+  on: (event: string, cb: (data?: PlayerJSEventData) => void) => void;
 };
 
-const AUTO_DONE_THRESHOLD = 90; // % → marca done anche senza evento "ended"
-const HEARTBEAT_MS = 10_000;
-const LOG_PREFIX = "[BunnyPlayer]";
+const AUTO_DONE_THRESHOLD = 90;        // % → marca done anche senza evento "ended"
+const HEARTBEAT_MS = 10_000;           // intervallo di persist su DB
+const PLAY_PAUSE_DEDUP_MS = 800;       // ignora play/pause ripetuti entro questo intervallo
+
+const LOG = "[BunnyPlayer]";
 
 /**
- * Wrapper Bunny.net Stream con tracking via player.js (npm).
- * Il player Bunny iframe supporta nativamente player.js — basta inizializzare
- * `new playerjs.Player(iframe)` e ascoltare gli eventi.
+ * Wrapper Bunny.net Stream + tracking via player.js (npm).
+ * Eventi gestiti:
+ *  - play / pause → log su video_views (dedup entro 800ms per evitare doppi eventi)
+ *  - timeupdate → heartbeat ogni 10s su progress + video_views
+ *  - seeked → se l'utente trascina oltre la soglia di auto-done, marca done
+ *  - ended → done=true + completed_at
+ *  - watched_pct >= 90% → done=true (fallback per chi salta credits/silenzio finale)
  *
- * Log diagnostici lasciati a video per debug: aprendo la console del browser
- * si vedono i passaggi di init e gli eventi. Una volta verificato che tutto
- * funziona, si possono rimuovere.
+ * Dopo aver marcato done si chiama router.refresh(): la card sotto il player
+ * diventa "Modulo completato" e la sidebar sblocca il modulo successivo,
+ * senza che l'utente debba ricaricare manualmente la pagina.
  */
 export function BunnyPlayer({
   videoId,
@@ -49,8 +55,14 @@ export function BunnyPlayer({
   const lastPctRef = useRef<number>(initialPct);
   const lastSentAtRef = useRef<number>(0);
   const doneRef = useRef<boolean>(false);
+  const lastPlayPauseAtRef = useRef<{ play: number; pause: number }>({ play: 0, pause: 0 });
+  const initializedRef = useRef<boolean>(false);
 
   useEffect(() => {
+    if (initializedRef.current) return; // guard anti double-init
+    initializedRef.current = true;
+    if (!iframeRef.current) return;
+
     const sb = createClient();
     let cancelled = false;
     let player: PlayerJSInstance | null = null;
@@ -58,112 +70,104 @@ export function BunnyPlayer({
     async function persist(pct: number, done = false) {
       lastPctRef.current = pct;
       lastSentAtRef.current = Date.now();
-      try {
-        const { error: e1 } = await sb.from("progress").upsert(
-          {
-            user_id: userId,
-            module_id: moduleId,
-            watched_pct: Math.min(100, Math.max(0, Math.round(pct))),
-            done,
-            completed_at: done ? new Date().toISOString() : null,
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,module_id" }
-        );
-        if (e1) console.warn(LOG_PREFIX, "progress upsert error", e1.message);
+      const watched = Math.min(100, Math.max(0, Math.round(pct)));
 
-        const { error: e2 } = await sb.from("video_views").insert({
+      const { error: e1 } = await sb.from("progress").upsert(
+        {
           user_id: userId,
           module_id: moduleId,
-          event_type: done ? "complete" : "heartbeat",
-          watched_pct: Math.round(pct),
-        });
-        if (e2) console.warn(LOG_PREFIX, "video_views insert error", e2.message);
+          watched_pct: watched,
+          done,
+          completed_at: done ? new Date().toISOString() : null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,module_id" }
+      );
+      if (e1) console.warn(LOG, "progress upsert error:", e1.message);
 
-        if (!e1 && !e2) {
-          console.log(LOG_PREFIX, "persist OK", { pct: Math.round(pct), done });
-        }
-      } catch (err) {
-        console.warn(LOG_PREFIX, "persist exception", err);
-      }
+      const { error: e2 } = await sb.from("video_views").insert({
+        user_id: userId,
+        module_id: moduleId,
+        event_type: done ? "complete" : "heartbeat",
+        watched_pct: watched,
+      });
+      if (e2) console.warn(LOG, "video_views insert error:", e2.message);
     }
 
     function markDoneOnce(pct: number) {
       if (doneRef.current) return;
       doneRef.current = true;
-      console.log(LOG_PREFIX, "DONE reached at", Math.round(pct), "%");
       persist(pct, true).then(() => {
         router.refresh();
         onDone?.();
       });
     }
 
-    function init() {
-      if (cancelled || !iframeRef.current) return;
-      try {
-        // Costruisce il player usando l'iframe element
-        // (player.js accetta sia un elemento DOM sia un id stringa)
-        const p = new (playerjs as { Player: new (el: HTMLIFrameElement) => PlayerJSInstance }).Player(iframeRef.current);
-        player = p;
-        console.log(LOG_PREFIX, "player.js inizializzato — aspetto ready");
-
-        p.on("ready", () => {
-          console.log(LOG_PREFIX, "✓ player ready — registro listener");
-
-          p.on("timeupdate", (data) => {
-            if (cancelled || !data || data.duration == null || data.seconds == null) return;
-            const pct = (data.seconds / data.duration) * 100;
-            const prevPct = lastPctRef.current;
-            lastPctRef.current = pct;
-
-            const elapsed = Date.now() - lastSentAtRef.current;
-            if (elapsed > HEARTBEAT_MS || pct - prevPct > 5) {
-              persist(pct, false);
-            }
-            if (pct >= AUTO_DONE_THRESHOLD) {
-              markDoneOnce(pct);
-            }
-          });
-
-          p.on("ended", () => {
-            if (cancelled) return;
-            console.log(LOG_PREFIX, "evento 'ended' ricevuto");
-            markDoneOnce(100);
-          });
-
-          p.on("play", () => {
-            if (cancelled) return;
-            console.log(LOG_PREFIX, "play");
-            sb.from("video_views").insert({
-              user_id: userId,
-              module_id: moduleId,
-              event_type: "play",
-              watched_pct: Math.round(lastPctRef.current),
-            }).then(() => {});
-          });
-
-          p.on("pause", () => {
-            if (cancelled) return;
-            console.log(LOG_PREFIX, "pause");
-            sb.from("video_views").insert({
-              user_id: userId,
-              module_id: moduleId,
-              event_type: "pause",
-              watched_pct: Math.round(lastPctRef.current),
-            }).then(() => {});
-          });
+    function logPlayPause(type: "play" | "pause") {
+      const now = Date.now();
+      if (now - lastPlayPauseAtRef.current[type] < PLAY_PAUSE_DEDUP_MS) return;
+      lastPlayPauseAtRef.current[type] = now;
+      sb.from("video_views")
+        .insert({
+          user_id: userId,
+          module_id: moduleId,
+          event_type: type,
+          watched_pct: Math.round(lastPctRef.current),
+        })
+        .then(({ error }) => {
+          if (error) console.warn(LOG, type, "insert error:", error.message);
         });
-      } catch (err) {
-        console.error(LOG_PREFIX, "init exception", err);
-      }
     }
 
-    // L'iframe deve essere già montato — siamo dentro useEffect, lo è.
-    // Dialoga in postMessage, quindi può partire subito.
-    init();
+    try {
+      const Ctor = (playerjs as { Player: new (el: HTMLIFrameElement) => PlayerJSInstance }).Player;
+      player = new Ctor(iframeRef.current);
+
+      player.on("ready", () => {
+        if (cancelled || !player) return;
+
+        player.on("timeupdate", (data) => {
+          if (cancelled || !data || data.duration == null || data.seconds == null) return;
+          const pct = (data.seconds / data.duration) * 100;
+          const prevPct = lastPctRef.current;
+          lastPctRef.current = pct;
+
+          // Persist periodico
+          const elapsed = Date.now() - lastSentAtRef.current;
+          if (elapsed > HEARTBEAT_MS || pct - prevPct > 5) {
+            persist(pct, false);
+          }
+          // Auto-done sopra soglia
+          if (pct >= AUTO_DONE_THRESHOLD) {
+            markDoneOnce(pct);
+          }
+        });
+
+        // Se trascina la barra oltre il 90% senza far scorrere il tempo
+        player.on("seeked", (data) => {
+          if (cancelled || !data || data.duration == null || data.seconds == null) return;
+          const pct = (data.seconds / data.duration) * 100;
+          lastPctRef.current = pct;
+          if (pct >= AUTO_DONE_THRESHOLD) {
+            markDoneOnce(pct);
+          }
+        });
+
+        player.on("ended", () => {
+          if (cancelled) return;
+          markDoneOnce(100);
+        });
+
+        player.on("play",  () => { if (!cancelled) logPlayPause("play"); });
+        player.on("pause", () => { if (!cancelled) logPlayPause("pause"); });
+      });
+    } catch (err) {
+      console.error(LOG, "init failed:", err);
+    }
 
     return () => {
       cancelled = true;
+      // player.js non espone destroy() — il garbage collector pulisce i postMessage handler
     };
   }, [moduleId, userId, onDone, router]);
 
